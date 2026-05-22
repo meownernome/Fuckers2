@@ -9,12 +9,19 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const supabase_js_1 = require("@supabase/supabase-js");
 const discord_js_1 = require("discord.js");
 dotenv_1.default.config();
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN ?? 'MTQ0MDk4NjQ4MTE0ODY5NDYwMA.GDiVmF._QGtpjcIabQt0o9ao9ettNWEThQga8axHr2w5o';
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID ?? '1440986481148694600';
-const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID ?? '1507008070528667729';
-const SUPABASE_URL = process.env.SUPABASE_URL ?? 'https://sb_publishable_5V43i7jzI0nOYLLteEZ6HQ_PSCxi430.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'sb_secret_mDZdpL6kZqwwF3-ldOFi2Q_8bo17aAJ';
-const JWT_SECRET = process.env.JWT_SECRET ?? 'MY_SECURE_HANDSHAKE_PASSPHRASE_123';
+function getRequiredEnv(name) {
+    const value = process.env[name]?.trim();
+    if (!value) {
+        throw new Error(`Missing required environment variable: ${name}`);
+    }
+    return value;
+}
+const DISCORD_BOT_TOKEN = getRequiredEnv('DISCORD_BOT_TOKEN');
+const DISCORD_CLIENT_ID = getRequiredEnv('DISCORD_CLIENT_ID');
+const DISCORD_GUILD_ID = getRequiredEnv('DISCORD_GUILD_ID');
+const SUPABASE_URL = getRequiredEnv('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
+const JWT_SECRET = getRequiredEnv('JWT_SECRET');
 const PORT = Number(process.env.PORT ?? '3000');
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
@@ -181,6 +188,11 @@ discordClient.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
     }
     await interaction.reply({ content: `Verification successful! Your Roblox name ${robloxUsername} is now linked.`, ephemeral: true });
 });
-discordClient.login(DISCORD_BOT_TOKEN).catch((error) => {
-    console.error('Discord login failed:', error);
-});
+if (!DISCORD_BOT_TOKEN) {
+    console.error('Discord bot token is missing or empty. Please set DISCORD_BOT_TOKEN.');
+}
+else {
+    discordClient.login(DISCORD_BOT_TOKEN).catch((error) => {
+        console.error('Discord login failed:', error);
+    });
+}

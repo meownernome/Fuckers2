@@ -6,9 +6,8 @@ import {
   Client,
   GatewayIntentBits,
   Events,
-  InteractionType,
+  ChannelType,
   type Role,
-  type Interaction,
 } from 'discord.js';
 
 dotenv.config();
@@ -16,6 +15,7 @@ dotenv.config();
 function getRequiredEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
+    console.error(`Available env vars: ${Object.keys(process.env).filter(k => k.includes('DISCORD') || k.includes('SUPABASE') || k.includes('JWT')).join(', ')}`);
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
@@ -39,10 +39,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   },
 });
 
-const discordClient = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+const discordClient = new Client({ 
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 
 function generateVerificationCode(): string {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
   for (let i = 0; i < 6; i++) {
     code += characters.charAt(Math.floor(Math.random() * characters.length));
@@ -71,7 +78,7 @@ app.post('/api/game/generate-code', async (req: Request, res: Response) => {
   }
 
   const code = generateVerificationCode();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
   const { error } = await supabase.from('verification_codes').insert({
     roblox_id: robloxId,
@@ -146,104 +153,183 @@ app.post('/api/game/check-roles', async (req: Request, res: Response) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Express server started on port ${PORT}`);
+  console.log(`[API] Express server started on port ${PORT}`);
 });
 
-discordClient.once(Events.ClientReady, async () => {
-  console.log(`Discord bot logged in as ${discordClient.user?.tag}`);
+discordClient.once(Events.ClientReady, () => {
+  console.log(`[BOT] Discord bot logged in as ${discordClient.user?.tag}`);
+});
 
-  const verifyCommand = {
-    name: 'verify',
-    description: 'Verify your Roblox account with a 6-character code',
-    options: [
-      {
-        name: 'code',
-        description: 'Your 6-character Roblox verification code',
-        type: 3,
-        required: true,
-      },
-    ],
-  };
+const pendingVerifications = new Map<string, string>();
 
-  if (discordClient.application) {
-    try {
-      await discordClient.application.commands.set([verifyCommand]);
-      console.log('Registered global /verify command');
-    } catch (commandError) {
-      console.error('Failed to register slash command', commandError);
+discordClient.on(Events.MessageCreate, async (message) => {
+  if (message.author.bot) return;
+  if (message.guild !== null) return;
+
+  const content = message.content.trim();
+  const normalized = content.toLowerCase();
+
+  if (normalized === '/verify' || normalized === '/verify ') {
+    await message.reply({
+      content: 'Please send your Roblox username in this DM using `/verify <RobloxUsername>`.',
+    });
+    return;
+  }
+
+  if (normalized.startsWith('/verify ')) {
+    const robloxUsername = content.slice(8).trim();
+
+    if (!robloxUsername) {
+      await message.reply({
+        content: 'Please provide your Roblox username: `/verify <RobloxUsername>`.',
+      });
+      return;
     }
-  }
-});
 
-discordClient.on(Events.InteractionCreate, async (interaction: Interaction) => {
-  if (!interaction.isChatInputCommand() || interaction.commandName !== 'verify') {
+    try {
+      const { data: users, error: userError } = await supabase
+        .from('verified_users')
+        .select('roblox_id, roblox_username')
+        .eq('discord_id', message.author.id)
+        .limit(1);
+
+      if (userError) {
+        console.error('Supabase user query error:', userError);
+        await message.reply({
+          content: 'An error occurred. Please try again later.',
+        });
+        return;
+      }
+
+      if (users && users.length > 0) {
+        await message.reply({
+          content: `You are already verified as: ${users[0].roblox_username}\n\nTo verify a different account, contact a server administrator.`,
+        });
+        return;
+      }
+
+      pendingVerifications.set(message.author.id, robloxUsername);
+      await message.reply({
+        content: `Verification started for Roblox username: **${robloxUsername}**\n\nPlease paste the 6-character code from the game in this DM now.`,
+      });
+    } catch (err) {
+      console.error('DM verification error:', err);
+      await message.reply({
+        content: 'An error occurred processing your request.',
+      });
+    }
     return;
   }
 
-  const code = interaction.options.getString('code', true).toUpperCase();
+  const codeCandidate = content.toUpperCase();
+  if (/^[A-Z0-9]{6}$/.test(codeCandidate)) {
+    const pendingUsername = pendingVerifications.get(message.author.id);
+    if (!pendingUsername) {
+      await message.reply({
+        content: 'Please start verification first with `/verify <RobloxUsername>`.',
+      });
+      return;
+    }
 
-  const { data: codes, error: codeError } = await supabase
-    .from('verification_codes')
-    .select('roblox_id, roblox_username, expires_at')
-    .eq('code', code)
-    .limit(1);
+    try {
+      const { data: codes, error: codeError } = await supabase
+        .from('verification_codes')
+        .select('roblox_id, roblox_username, expires_at')
+        .eq('code', codeCandidate)
+        .limit(1);
 
-  if (codeError) {
-    console.error('Supabase verification fetch error', codeError);
-    await interaction.reply({ content: 'An error occurred while verifying your code.', ephemeral: true });
+      if (codeError || !codes || codes.length === 0) {
+        await message.reply({
+          content: 'Verification code not found or invalid.',
+        });
+        return;
+      }
+
+      const entry = codes[0];
+      if (!entry.roblox_username || entry.roblox_username.toLowerCase() !== pendingUsername.toLowerCase()) {
+        await message.reply({
+          content: 'This code does not match the Roblox username you provided.',
+        });
+        return;
+      }
+
+      const expiresAt = new Date(entry.expires_at);
+      if (expiresAt.getTime() < Date.now()) {
+        await message.reply({
+          content: 'This verification code has expired.',
+        });
+        return;
+      }
+
+      const robloxId = entry.roblox_id;
+      const robloxUsername = entry.roblox_username;
+
+      const { error: upsertError } = await supabase.from('verified_users').upsert(
+        {
+          discord_id: message.author.id,
+          roblox_id: robloxId,
+          roblox_username: robloxUsername,
+        },
+        { onConflict: 'discord_id' }
+      );
+
+      if (upsertError) {
+        console.error('Supabase upsert verified_users error', upsertError);
+        await message.reply({
+          content: 'Failed to save verification mapping.',
+        });
+        return;
+      }
+
+      const { error: deleteError } = await supabase.from('verification_codes').delete().eq('code', codeCandidate);
+      if (deleteError) {
+        console.error('Supabase delete code error', deleteError);
+      }
+
+      pendingVerifications.delete(message.author.id);
+
+      try {
+        const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+        const member = await guild.members.fetch(message.author.id);
+        await member.setNickname(robloxUsername);
+      } catch (nicknameError) {
+        console.warn('Could not update nickname:', nicknameError);
+      }
+
+      const successMessage = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  VERIFICATION COMPLETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Username: ${robloxUsername}
+Status: Verified
+
+Your Discord server nickname has been updated.
+Your roles will sync in the Roblox game.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+      await message.reply({
+        content: successMessage,
+      });
+    } catch (err) {
+      console.error('Code verification error:', err);
+      await message.reply({
+        content: 'An error occurred verifying your code.',
+      });
+    }
     return;
   }
 
-  if (!codes || codes.length === 0) {
-    await interaction.reply({ content: 'That verification code was not found.', ephemeral: true });
-    return;
-  }
-
-  const entry = codes[0];
-  const expiresAt = new Date(entry.expires_at);
-  if (expiresAt.getTime() < Date.now()) {
-    await interaction.reply({ content: 'That verification code has expired.', ephemeral: true });
-    return;
-  }
-
-  const robloxId = entry.roblox_id;
-  const robloxUsername = entry.roblox_username;
-
-  const { error: upsertError } = await supabase.from('verified_users').upsert(
-    {
-      discord_id: interaction.user.id,
-      roblox_id: robloxId,
-      roblox_username: robloxUsername,
-    },
-    { onConflict: 'discord_id' }
-  );
-
-  if (upsertError) {
-    console.error('Supabase upsert verified_users error', upsertError);
-    await interaction.reply({ content: 'Failed to save verification mapping.', ephemeral: true });
-    return;
-  }
-
-  const { error: deleteError } = await supabase.from('verification_codes').delete().eq('code', code);
-  if (deleteError) {
-    console.error('Supabase delete code error', deleteError);
-  }
-
-  try {
-    const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
-    const member = await guild.members.fetch(interaction.user.id);
-    await member.setNickname(`[Verified] ${robloxUsername}`);
-  } catch (nicknameError) {
-    console.warn('Could not update nickname:', nicknameError);
-  }
-
-  await interaction.reply({ content: `Verification successful! Your Roblox name ${robloxUsername} is now linked.`, ephemeral: true });
+  await message.reply({
+    content: 'Send `/verify <RobloxUsername>` to begin verification, then paste the code from the game in this DM.',
+  });
 });
 
 if (!DISCORD_BOT_TOKEN) {
-  console.error('Discord bot token is missing or empty. Please set DISCORD_BOT_TOKEN.');
+  console.error('[BOT] Discord bot token is missing or empty. Please set DISCORD_BOT_TOKEN.');
 } else {
   discordClient.login(DISCORD_BOT_TOKEN).catch((error: unknown) => {
-    console.error('Discord login failed:', error);
+    console.error('[BOT] Discord login failed:', error);
   });
 }

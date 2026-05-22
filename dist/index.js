@@ -124,17 +124,25 @@ app.listen(PORT, () => {
 discordClient.once(discord_js_1.Events.ClientReady, () => {
     console.log(`[BOT] Discord bot logged in as ${discordClient.user?.tag}`);
 });
+const pendingVerifications = new Map();
 discordClient.on(discord_js_1.Events.MessageCreate, async (message) => {
     if (message.author.bot)
         return;
     if (message.guild !== null)
         return;
     const content = message.content.trim();
-    if (content.startsWith('/verify ')) {
+    const normalized = content.toLowerCase();
+    if (normalized === '/verify' || normalized === '/verify ') {
+        await message.reply({
+            content: 'Please send your Roblox username in this DM using `/verify <RobloxUsername>`.',
+        });
+        return;
+    }
+    if (normalized.startsWith('/verify ')) {
         const robloxUsername = content.slice(8).trim();
-        if (!robloxUsername || robloxUsername.length === 0) {
+        if (!robloxUsername) {
             await message.reply({
-                content: 'Usage: /verify <RobloxUsername>',
+                content: 'Please provide your Roblox username: `/verify <RobloxUsername>`.',
             });
             return;
         }
@@ -145,6 +153,7 @@ discordClient.on(discord_js_1.Events.MessageCreate, async (message) => {
                 .eq('discord_id', message.author.id)
                 .limit(1);
             if (userError) {
+                console.error('Supabase user query error:', userError);
                 await message.reply({
                     content: 'An error occurred. Please try again later.',
                 });
@@ -152,45 +161,13 @@ discordClient.on(discord_js_1.Events.MessageCreate, async (message) => {
             }
             if (users && users.length > 0) {
                 await message.reply({
-                    content: `You are already verified as: ${users[0].roblox_username}\n\nTo verify a different account, contact server administrators.`,
+                    content: `You are already verified as: ${users[0].roblox_username}\n\nTo verify a different account, contact a server administrator.`,
                 });
                 return;
             }
-            const code = generateVerificationCode();
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-            const { error: insertError } = await supabase.from('verification_codes').insert({
-                roblox_id: null,
-                roblox_username: robloxUsername,
-                discord_user_id: message.author.id,
-                code,
-                expires_at: expiresAt,
-            });
-            if (insertError) {
-                console.error('Insert error:', insertError);
-                await message.reply({
-                    content: 'Failed to generate verification code. Please try again.',
-                });
-                return;
-            }
-            const confirmMessage = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  VERIFICATION CODE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Roblox Username: ${robloxUsername}
-Code: \`${code}\`
-Expires: 10 minutes
-
-Next Steps:
-1. Join the Roblox game
-2. Click "CODE RECEIVED" button
-3. Click to copy the code shown in-game
-4. Paste the code here or in game
-5. You will be verified
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+            pendingVerifications.set(message.author.id, robloxUsername);
             await message.reply({
-                content: confirmMessage,
+                content: `Verification started for Roblox username: **${robloxUsername}**\n\nPlease paste the 6-character code from the game in this DM now.`,
             });
         }
         catch (err) {
@@ -201,12 +178,20 @@ Next Steps:
         }
         return;
     }
-    if (content.length === 6 && /^[A-Z0-9]{6}$/.test(content)) {
+    const codeCandidate = content.toUpperCase();
+    if (/^[A-Z0-9]{6}$/.test(codeCandidate)) {
+        const pendingUsername = pendingVerifications.get(message.author.id);
+        if (!pendingUsername) {
+            await message.reply({
+                content: 'Please start verification first with `/verify <RobloxUsername>`.',
+            });
+            return;
+        }
         try {
             const { data: codes, error: codeError } = await supabase
                 .from('verification_codes')
-                .select('roblox_username, expires_at, discord_user_id')
-                .eq('code', content)
+                .select('roblox_id, roblox_username, expires_at')
+                .eq('code', codeCandidate)
                 .limit(1);
             if (codeError || !codes || codes.length === 0) {
                 await message.reply({
@@ -215,9 +200,9 @@ Next Steps:
                 return;
             }
             const entry = codes[0];
-            if (entry.discord_user_id !== message.author.id) {
+            if (!entry.roblox_username || entry.roblox_username.toLowerCase() !== pendingUsername.toLowerCase()) {
                 await message.reply({
-                    content: 'This code belongs to a different user.',
+                    content: 'This code does not match the Roblox username you provided.',
                 });
                 return;
             }
@@ -228,27 +213,32 @@ Next Steps:
                 });
                 return;
             }
+            const robloxId = entry.roblox_id;
             const robloxUsername = entry.roblox_username;
             const { error: upsertError } = await supabase.from('verified_users').upsert({
                 discord_id: message.author.id,
-                roblox_id: null,
+                roblox_id: robloxId,
                 roblox_username: robloxUsername,
             }, { onConflict: 'discord_id' });
             if (upsertError) {
-                console.error('Upsert error:', upsertError);
+                console.error('Supabase upsert verified_users error', upsertError);
                 await message.reply({
-                    content: 'Failed to complete verification.',
+                    content: 'Failed to save verification mapping.',
                 });
                 return;
             }
-            await supabase.from('verification_codes').delete().eq('code', content);
+            const { error: deleteError } = await supabase.from('verification_codes').delete().eq('code', codeCandidate);
+            if (deleteError) {
+                console.error('Supabase delete code error', deleteError);
+            }
+            pendingVerifications.delete(message.author.id);
             try {
                 const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
                 const member = await guild.members.fetch(message.author.id);
                 await member.setNickname(robloxUsername);
             }
-            catch (nicknameErr) {
-                console.warn('Could not update nickname:', nicknameErr);
+            catch (nicknameError) {
+                console.warn('Could not update nickname:', nicknameError);
             }
             const successMessage = `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -274,6 +264,9 @@ Your roles will sync in the Roblox game.
         }
         return;
     }
+    await message.reply({
+        content: 'Send `/verify <RobloxUsername>` to begin verification, then paste the code from the game in this DM.',
+    });
 });
 if (!DISCORD_BOT_TOKEN) {
     console.error('[BOT] Discord bot token is missing or empty. Please set DISCORD_BOT_TOKEN.');

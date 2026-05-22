@@ -13,7 +13,7 @@ import {
 
 dotenv.config();
 
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN ?? 'MTQ0MDk4NjQ4MTE0ODY5NDYwMA.GDiVmF._QGtpjcIabQt0o9ao9ettNWEThQga8axHr2w5o';
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN ?? 'MTQ0MDk4NjQ4MTE0ODY5NDYwMA.G5uXru.1_KnEMNhE8noIpvYyk6eEGCr-isuBV-XJ36dn8';
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID ?? '1440986481148694600';
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID ?? '1507008070528667729';
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'https://sb_publishable_5V43i7jzI0nOYLLteEZ6HQ_PSCxi430.supabase.co';

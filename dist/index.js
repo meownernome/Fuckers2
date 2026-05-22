@@ -136,6 +136,10 @@ discordClient.once(discord_js_1.Events.ClientReady, async () => {
                 },
             ],
         },
+        {
+            name: 'logout',
+            description: 'Remove your Roblox verification and reset your nickname for this server',
+        },
     ];
     try {
         if (discordClient.application?.commands) {
@@ -154,6 +158,31 @@ const pendingVerifications = new Map();
 discordClient.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand())
         return;
+    if (interaction.commandName === 'logout') {
+        await interaction.deferReply({ ephemeral: true });
+        try {
+            const { error } = await supabase.from('verified_users').delete().eq('discord_id', interaction.user.id);
+            if (error) {
+                console.error('Supabase logout delete error:', error);
+                await interaction.editReply({ content: 'Unable to log you out right now. Please try again later.' });
+                return;
+            }
+            try {
+                const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+                const member = await guild.members.fetch(interaction.user.id);
+                await member.setNickname(null);
+            }
+            catch (nicknameError) {
+                console.warn('Could not reset nickname during logout:', nicknameError);
+            }
+            await interaction.editReply({ content: 'You have been logged out from Roblox verification and your server nickname was reset.' });
+        }
+        catch (err) {
+            console.error('Logout command error:', err);
+            await interaction.editReply({ content: 'An error occurred while logging you out.' });
+        }
+        return;
+    }
     if (interaction.commandName !== 'verify')
         return;
     console.log('[BOT] Interaction received from', interaction.user.tag);
@@ -231,7 +260,7 @@ discordClient.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
         }
         else if (users && users.length > 0) {
             await interaction.editReply({ content: `You are already verified as: ${users[0].roblox_username}
-Contact a server administrator to re-verify.` });
+If you want to switch accounts, use /logout first and then verify again.` });
             return;
         }
         pendingVerifications.set(interaction.user.id, robloxUsername);
@@ -260,6 +289,30 @@ discordClient.on(discord_js_1.Events.MessageCreate, async (message) => {
         return;
     const content = message.content.trim();
     const normalized = content.toLowerCase();
+    if (normalized === '/logout' || normalized === '/logout ') {
+        try {
+            const { error } = await supabase.from('verified_users').delete().eq('discord_id', message.author.id);
+            if (error) {
+                console.error('Supabase DM logout delete error:', error);
+                await message.reply({ content: 'Unable to log you out right now. Please try again later.' });
+                return;
+            }
+            try {
+                const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+                const member = await guild.members.fetch(message.author.id);
+                await member.setNickname(null);
+            }
+            catch (nicknameError) {
+                console.warn('Could not reset nickname during DM logout:', nicknameError);
+            }
+            await message.reply({ content: 'You have been logged out from Roblox verification and your server nickname was reset.' });
+        }
+        catch (err) {
+            console.error('DM logout error:', err);
+            await message.reply({ content: 'An error occurred while logging you out.' });
+        }
+        return;
+    }
     if (normalized === '/verify' || normalized === '/verify ') {
         await message.reply({
             content: 'Please send your Roblox username in this DM using `/verify <RobloxUsername>`.',

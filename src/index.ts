@@ -155,27 +155,36 @@ function parseDivisionLua(): DivisionDefinition[] {
 }
 
 function discordColorFromName(name: string): number {
-  const normalized = name.toLowerCase();
-  if (normalized.includes('red')) return 0xe74c3c;
-  if (normalized.includes('orange')) return 0xe67e22;
-  if (normalized.includes('yellow')) return 0xf1c40f;
-  if (normalized.includes('gold')) return 0xf39c12;
-  if (normalized.includes('green')) return 0x2ecc71;
-  if (normalized.includes('teal')) return 0x1abc9c;
-  if (normalized.includes('cyan')) return 0x17a589;
-  if (normalized.includes('blue')) return 0x3498db;
-  if (normalized.includes('navy')) return 0x2c3e50;
-  if (normalized.includes('purple')) return 0x8e44ad;
-  if (normalized.includes('magenta')) return 0xc0392b;
-  if (normalized.includes('pink')) return 0xff79c6;
-  if (normalized.includes('gray') || normalized.includes('grey')) return 0x95a5a6;
-  if (normalized.includes('black')) return 0x23272a;
-  if (normalized.includes('white')) return 0xffffff;
-  if (normalized.includes('brown')) return 0x6e2c00;
-  if (normalized.includes('olive')) return 0x556b2f;
-  if (normalized.includes('silver')) return 0xbdc3c7;
-  if (normalized.includes('crimson')) return 0xdc143c;
-  if (normalized.includes('maroon')) return 0x800000;
+  const normalized = name.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ');
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+
+  if (tokens.includes('gold')) return 0xf39c12;
+  if (tokens.includes('yellow')) return 0xf1c40f;
+  if (tokens.includes('orange')) return 0xe67e22;
+  if (tokens.includes('fiery')) return 0xe74c3c;
+  if (tokens.includes('rust')) return 0xd35400;
+  if (tokens.includes('red')) return 0xe74c3c;
+  if (tokens.includes('crimson')) return 0xdc143c;
+  if (tokens.includes('maroon')) return 0x800000;
+  if (tokens.includes('pink')) return 0xff79c6;
+  if (tokens.includes('magenta')) return 0xc0392b;
+  if (tokens.includes('purple')) return 0x8e44ad;
+  if (tokens.includes('indigo')) return 0x4b0082;
+  if (tokens.includes('blue')) return 0x3498db;
+  if (tokens.includes('royal')) return 0x4169e1;
+  if (tokens.includes('navy')) return 0x2c3e50;
+  if (tokens.includes('teal')) return 0x1abc9c;
+  if (tokens.includes('cyan')) return 0x17a589;
+  if (tokens.includes('green')) return 0x2ecc71;
+  if (tokens.includes('olive')) return 0x556b2f;
+  if (tokens.includes('brown')) return 0x6e2c00;
+  if (tokens.includes('gunmetal')) return 0x7f8c8d;
+  if (tokens.includes('slate')) return 0x708090;
+  if (tokens.includes('silver')) return 0xbdc3c7;
+  if (tokens.includes('black')) return 0x23272a;
+  if (tokens.includes('white')) return 0xffffff;
+  if (tokens.includes('gray') || tokens.includes('grey')) return 0x95a5a6;
+
   return 0x5865f2;
 }
 
@@ -447,6 +456,30 @@ discordClient.once(Events.ClientReady, async () => {
         },
       ],
     },
+    {
+      name: 'delete',
+      description: 'Delete roles from the server',
+      options: [
+        {
+          name: 'scope',
+          description: 'What to delete',
+          type: 3,
+          required: true,
+          choices: [
+            { name: 'all roles', value: 'all' },
+            { name: 'division roles', value: 'divisions' },
+            { name: 'rank/visual roles', value: 'visual' },
+            { name: 'single role', value: 'single' },
+          ],
+        },
+        {
+          name: 'role-name',
+          description: 'Name of the role to delete (only for single role)',
+          type: 3,
+          required: false,
+        },
+      ],
+    },
   ];
 
   try {
@@ -589,6 +622,7 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
         division.ranks.map((rank) => ({
           name: buildRoleName(division, rank),
           color: discordColorFromName(division.visualColor),
+          division: division.displayName,
         }))
       );
 
@@ -597,24 +631,25 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       const existingRolesCount = rankRoles.length - newRoles.length;
 
       console.log(`[create-roles] Total rank roles needed: ${rankRoles.length}, Already exist: ${existingRolesCount}, Need to create: ${newRoles.length}`);
+      console.log(`[create-roles] Sample roles to create:`, newRoles.slice(0, 5));
 
       if (newRoles.length === 0) {
-        // Show which roles already exist
         const existingRoleNames = rankRoles
           .filter((roleItem) => guild.roles.cache.some((role) => role.name === roleItem.name))
           .map((r) => r.name)
           .slice(0, 10);
         const suffix = rankRoles.length > 10 ? `\n...and ${rankRoles.length - 10} more` : '';
-        await interaction.editReply({ content: `✓ All ${rankRoles.length} rank roles already exist in the server.\n\nExisting roles:\n${existingRoleNames.map(n => `• ${n}`).join('\n')}${suffix}\n\nTo recreate roles, delete them first then run this command again.` });
+        await interaction.editReply({ content: `✓ All ${rankRoles.length} rank roles already exist in the server.\n\nExisting roles:\n${existingRoleNames.map(n => `• ${n}`).join('\n')}${suffix}\n\nTo recreate roles, use \`/delete all-roles\` first then run this command again.` });
         return;
       }
 
       if (newRoles.length > availableSlots || newRoles.length > 180) {
-        await interaction.editReply({ content: `There are ${newRoles.length} rank roles to create, which exceeds Discord limits. Use "/create-roles scope:division" instead or create a smaller subset.` });
+        await interaction.editReply({ content: `There are ${newRoles.length} rank roles to create, which exceeds Discord limits (max 180). Use "/create-roles scope:division" instead or create a smaller subset.` });
         return;
       }
 
       let createdCount = 0;
+      const createdRoles: string[] = [];
       for (const roleItem of newRoles) {
         try {
           await guild.roles.create({
@@ -623,12 +658,16 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
             reason: 'Auto-created rank role from division.lua',
           });
           createdCount += 1;
+          if (createdCount <= 15) {
+            createdRoles.push(`• ${roleItem.name}`);
+          }
         } catch (err) {
           console.warn('Failed to create rank role:', roleItem.name, err);
         }
       }
 
-      await interaction.editReply({ content: `✓ Created ${createdCount} rank role(s) from division.lua!\n(${existingRolesCount} roles already existed)` });
+      const displayRoles = createdRoles.join('\n') + (newRoles.length > 15 ? `\n...and ${newRoles.length - 15} more roles` : '');
+      await interaction.editReply({ content: `✓ Created ${createdCount} rank role(s) from division.lua!\n(${existingRolesCount} roles already existed)\n\n**Sample roles created:**\n${displayRoles}` });
       return;
     }
 
@@ -706,6 +745,121 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     const attachment = new AttachmentBuilder(csvBuffer).setName('division_roles.csv');
 
     await interaction.editReply({ content: 'Division role list generated.', files: [attachment] });
+    return;
+  }
+
+  if (interaction.commandName === 'delete') {
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.guild) {
+      await interaction.editReply({ content: 'This command must be used in the server channel.' });
+      return;
+    }
+
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles)) {
+      await interaction.editReply({ content: 'You need Manage Roles permission to delete roles.' });
+      return;
+    }
+
+    const scope = interaction.options.getString('scope') ?? 'all-roles';
+    const singleRoleName = interaction.options.getString('role-name');
+
+    const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+    await guild.roles.fetch();
+
+    if (scope === 'single') {
+      if (!singleRoleName) {
+        await interaction.editReply({ content: 'Please specify a role name to delete.' });
+        return;
+      }
+
+      const roleToDelete = guild.roles.cache.find((role) => role.name === singleRoleName);
+      if (!roleToDelete) {
+        await interaction.editReply({ content: `Role "${singleRoleName}" not found in this server.` });
+        return;
+      }
+
+      try {
+        await roleToDelete.delete('Deleted via /delete command');
+        await interaction.editReply({ content: `✓ Deleted role: ${singleRoleName}` });
+      } catch (err) {
+        console.error('Failed to delete role:', err);
+        await interaction.editReply({ content: `Failed to delete role. Check bot permissions and role hierarchy.` });
+      }
+      return;
+    }
+
+    if (scope === 'divisions') {
+      let divisions: DivisionDefinition[];
+      try {
+        divisions = parseDivisionLua();
+      } catch (err) {
+        console.error('delete divisions parse error:', err);
+        await interaction.editReply({ content: 'Unable to load division.lua.' });
+        return;
+      }
+
+      const divisionRoleNames = divisions.map((d) => buildDivisionRoleName(d));
+      const rolesToDelete = guild.roles.cache.filter((role) => divisionRoleNames.includes(role.name));
+      let deletedCount = 0;
+
+      for (const role of rolesToDelete.values()) {
+        try {
+          await role.delete('Deleted via /delete division roles');
+          deletedCount += 1;
+        } catch (err) {
+          console.warn('Failed to delete division role:', role.name, err);
+        }
+      }
+
+      await interaction.editReply({ content: `✓ Deleted ${deletedCount} division role(s).` });
+      return;
+    }
+
+    if (scope === 'visual') {
+      let divisions: DivisionDefinition[];
+      try {
+        divisions = parseDivisionLua();
+      } catch (err) {
+        console.error('delete visual parse error:', err);
+        await interaction.editReply({ content: 'Unable to load division.lua.' });
+        return;
+      }
+
+      const rankRoleNames = divisions.flatMap((division) =>
+        division.ranks.map((rank) => buildRoleName(division, rank))
+      );
+      const rolesToDelete = guild.roles.cache.filter((role) => rankRoleNames.includes(role.name));
+      let deletedCount = 0;
+
+      for (const role of rolesToDelete.values()) {
+        try {
+          await role.delete('Deleted via /delete visual roles');
+          deletedCount += 1;
+        } catch (err) {
+          console.warn('Failed to delete visual role:', role.name, err);
+        }
+      }
+
+      await interaction.editReply({ content: `✓ Deleted ${deletedCount} rank/visual role(s).` });
+      return;
+    }
+
+    // scope === 'all'
+    let deletedCount = 0;
+    for (const role of guild.roles.cache.values()) {
+      // Skip @everyone role
+      if (role.id === guild.id) continue;
+
+      try {
+        await role.delete('Deleted via /delete all roles');
+        deletedCount += 1;
+      } catch (err) {
+        console.warn('Failed to delete role:', role.name, err);
+      }
+    }
+
+    await interaction.editReply({ content: `⚠️ Deleted ${deletedCount} role(s) from the server.` });
     return;
   }
 

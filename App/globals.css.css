@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-[#161920]/60 backdrop-blur-xl border border-white/[0.06] shadow-2xl shadow-black/40;
+  }
+  .glass-card {
+    @apply bg-[#1c202b]/40 backdrop-blur-md border border-white/[0.04] transition-all duration-300;
+  }
+}

@@ -279,12 +279,8 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       .limit(1);
 
     if (userError) {
-      console.error('Supabase user query error:', userError);
-      await interaction.editReply({ content: 'An error occurred. Please try again later.' });
-      return;
-    }
-
-    if (users && users.length > 0) {
+      console.error('Supabase user lookup failed, continuing verification:', userError);
+    } else if (users && users.length > 0) {
       await interaction.editReply({ content: `You are already verified as: ${users[0].roblox_username}
 Contact a server administrator to re-verify.` });
       return;
@@ -341,14 +337,8 @@ discordClient.on(Events.MessageCreate, async (message) => {
         .limit(1);
 
       if (userError) {
-        console.error('Supabase user query error:', userError);
-        await message.reply({
-          content: 'An error occurred. Please try again later.',
-        });
-        return;
-      }
-
-      if (users && users.length > 0) {
+        console.error('Supabase user lookup failed, continuing verification:', userError);
+      } else if (users && users.length > 0) {
         await message.reply({
           content: `You are already verified as: ${users[0].roblox_username}\n\nTo verify a different account, contact a server administrator.`,
         });

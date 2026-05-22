@@ -121,10 +121,67 @@ app.post('/api/game/check-roles', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`[API] Express server started on port ${PORT}`);
 });
-discordClient.once(discord_js_1.Events.ClientReady, () => {
+discordClient.once(discord_js_1.Events.ClientReady, async () => {
     console.log(`[BOT] Discord bot logged in as ${discordClient.user?.tag}`);
+    try {
+        const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+        await guild.commands.set([
+            {
+                name: 'verify',
+                description: 'Start Roblox verification',
+                options: [
+                    {
+                        name: 'username',
+                        description: 'Your Roblox username',
+                        type: 3,
+                        required: true,
+                    },
+                ],
+            },
+        ]);
+        console.log('[BOT] Registered /verify command in guild');
+    }
+    catch (commandError) {
+        console.error('[BOT] Command registration failed:', commandError);
+    }
 });
 const pendingVerifications = new Map();
+discordClient.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isChatInputCommand())
+        return;
+    if (interaction.commandName !== 'verify')
+        return;
+    const robloxUsername = interaction.options.getString('username', true).trim();
+    if (!robloxUsername) {
+        await interaction.reply({ content: 'Please provide your Roblox username.', ephemeral: true });
+        return;
+    }
+    try {
+        const { data: users, error: userError } = await supabase
+            .from('verified_users')
+            .select('roblox_id, roblox_username')
+            .eq('discord_id', interaction.user.id)
+            .limit(1);
+        if (userError) {
+            console.error('Supabase user query error:', userError);
+            await interaction.reply({ content: 'An error occurred. Please try again later.', ephemeral: true });
+            return;
+        }
+        if (users && users.length > 0) {
+            await interaction.reply({ content: `You are already verified as: ${users[0].roblox_username}\nContact a server administrator to re-verify.`, ephemeral: true });
+            return;
+        }
+        pendingVerifications.set(interaction.user.id, robloxUsername);
+        await interaction.reply({ content: 'Verification started. Check your DMs for the next step.', ephemeral: true });
+        await interaction.user.send({
+            content: `Verification initiated for Roblox username: **${robloxUsername}**\n\nPlease paste the 6-character code from the game in this DM now.`,
+        });
+    }
+    catch (err) {
+        console.error('Slash command verification error:', err);
+        await interaction.reply({ content: 'An error occurred processing your request.', ephemeral: true });
+    }
+});
 discordClient.on(discord_js_1.Events.MessageCreate, async (message) => {
     if (message.author.bot)
         return;

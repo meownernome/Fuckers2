@@ -9,8 +9,10 @@ import {
   GatewayIntentBits,
   Events,
   type Role,
+  type OverwriteData,
   PermissionFlagsBits,
   AttachmentBuilder,
+  ChannelType,
 } from 'discord.js';
 
 dotenv.config();
@@ -207,6 +209,33 @@ function buildRoleName(division: DivisionDefinition, rank: string): string {
 
 function buildDivisionRoleName(division: DivisionDefinition): string {
   return division.displayName;
+}
+
+function getChannelSlug(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[\/\\'"`^]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function buildDivisionCategoryName(division: DivisionDefinition): string {
+  return `${division.displayName} Division`;
+}
+
+function buildDivisionChannelNames(division: DivisionDefinition): string[] {
+  const prefix = getChannelSlug(division.displayName);
+  return [
+    `${prefix}-general`,
+    `${prefix}-announcements`,
+    `${prefix}-ops`,
+    `${prefix}-briefing`,
+    `${prefix}-team-chat`,
+    `${prefix}-resources`,
+    `${prefix}-command-voice`,
+    `${prefix}-briefing-voice`,
+  ];
 }
 
 function csvEscape(text: string): string {
@@ -438,6 +467,18 @@ discordClient.once(Events.ClientReady, async () => {
       ],
     },
     {
+      name: 'complete',
+      description: 'Build a division category and channels automatically',
+      options: [
+        {
+          name: 'division',
+          description: 'Division key or display name to finish server setup for',
+          type: 3,
+          required: true,
+        },
+      ],
+    },
+    {
       name: 'create-roles',
       description: 'Automatically create division and rank roles from division.lua',
       options: [
@@ -606,6 +647,141 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     } catch (err) {
       console.error('freeze command error:', err);
       await interaction.editReply({ content: 'Unable to freeze that user. Please check bot permissions and role hierarchy.' });
+    }
+    return;
+  }
+
+  if (interaction.commandName === 'complete') {
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.guild) {
+      await interaction.editReply({ content: 'This command must be used in the server channel.' });
+      return;
+    }
+
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+      await interaction.editReply({ content: 'You need Manage Channels permission to complete a division setup.' });
+      return;
+    }
+
+    const divisionArg = interaction.options.getString('division', true).trim();
+    let divisions: DivisionDefinition[];
+    try {
+      divisions = parseDivisionLua();
+    } catch (err) {
+      console.error('complete parse error:', err);
+      await interaction.editReply({ content: 'Unable to load division.lua. Make sure the file exists and is accessible.' });
+      return;
+    }
+
+    const lowerArg = divisionArg.toLowerCase();
+    const matched = divisions.find(
+      (division) =>
+        division.key.toLowerCase() === lowerArg || division.displayName.toLowerCase() === lowerArg
+    );
+
+    if (!matched) {
+      await interaction.editReply({ content: `Division not found: ${divisionArg}. Use a valid division key or display name from division.lua.` });
+      return;
+    }
+
+    try {
+      const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+      await guild.roles.fetch();
+      await guild.channels.fetch();
+
+      let divisionRole = guild.roles.cache.find((role) => role.name === buildDivisionRoleName(matched));
+      let roleCreationNote = '';
+      if (!divisionRole) {
+        try {
+          divisionRole = await guild.roles.create({
+            name: buildDivisionRoleName(matched),
+            color: discordColorFromName(matched.visualColor),
+            reason: `Auto-created division role for ${matched.displayName} category setup`,
+          });
+          roleCreationNote = `
+Division role created: ${divisionRole.name}`;
+        } catch (roleCreateError) {
+          console.warn('Could not create division role for complete command:', roleCreateError);
+        }
+      }
+
+      const categoryName = buildDivisionCategoryName(matched);
+      const existingCategory = guild.channels.cache.find(
+        (channel) => channel.type === ChannelType.GuildCategory && channel.name.toLowerCase() === categoryName.toLowerCase()
+      );
+
+      const permissionOverwrites: OverwriteData[] = [
+        {
+          id: guild.roles.everyone.id,
+          deny: [PermissionFlagsBits.ViewChannel],
+        },
+      ];
+
+      if (divisionRole) {
+        permissionOverwrites.push({
+          id: divisionRole.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+          ],
+        });
+      }
+
+      const category =
+        existingCategory ??
+        (await guild.channels.create({
+          name: categoryName,
+          type: ChannelType.GuildCategory,
+          permissionOverwrites,
+          reason: `Auto-created category for ${matched.displayName}`,
+        }));
+
+      const textChannels = ['general', 'announcements', 'ops', 'briefing', 'team-chat', 'resources'];
+      const voiceChannels = ['command-voice', 'briefing-voice'];
+      const createdChannels: string[] = [];
+      const existingChannels: string[] = [];
+
+      for (const baseName of [...textChannels, ...voiceChannels]) {
+        const channelName = `${getChannelSlug(matched.displayName)}-${baseName}`;
+        const existing = guild.channels.cache.find(
+          (channel) => channel.parentId === category.id && channel.name === channelName
+        );
+
+        if (existing) {
+          existingChannels.push(channelName);
+          continue;
+        }
+
+        await guild.channels.create({
+          name: channelName,
+          type: voiceChannels.includes(baseName) ? ChannelType.GuildVoice : ChannelType.GuildText,
+          parent: category.id,
+          permissionOverwrites,
+          topic:
+            baseName === 'announcements'
+              ? `Announcements for ${matched.displayName}`
+              : `Channel for ${matched.displayName} division`,
+          reason: `Auto-created ${baseName} channel for ${matched.displayName}`,
+        });
+        createdChannels.push(channelName);
+      }
+
+      const parts = [`✓ Setup complete for ${matched.displayName}.`, roleCreationNote];
+      if (createdChannels.length) {
+        parts.push(`Created channels:
+• ${createdChannels.join('\n• ')}`);
+      }
+      if (existingChannels.length) {
+        parts.push(`Already existing channels:
+• ${existingChannels.join('\n• ')}`);
+      }
+
+      await interaction.editReply({ content: parts.filter(Boolean).join('\n\n') });
+    } catch (err) {
+      console.error('complete command error:', err);
+      await interaction.editReply({ content: 'Unable to complete the division channel setup. Check bot permissions and try again.' });
     }
     return;
   }

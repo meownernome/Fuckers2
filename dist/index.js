@@ -229,11 +229,39 @@ function discordColorFromName(name) {
         return 0x95a5a6;
     return 0x5865f2;
 }
+function getDivisionShortName(division) {
+    const display = division.displayName?.trim() ?? '';
+    const key = division.key?.trim() ?? '';
+    if (/^[A-Z0-9]{2,5}$/.test(key)) {
+        return key;
+    }
+    const parenMatch = display.match(/\(([A-Z0-9]{2,6})\)/);
+    if (parenMatch) {
+        return parenMatch[1];
+    }
+    const acronymMatches = display.match(/\b[A-Z]{2,5}\b/g);
+    if (acronymMatches && acronymMatches.length > 0) {
+        return acronymMatches[acronymMatches.length - 1];
+    }
+    const words = display
+        .replace(/[^A-Za-z0-9 ]+/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean);
+    if (words.length === 0) {
+        return display.toUpperCase();
+    }
+    if (words.length <= 2) {
+        return words.map((word) => word[0].toUpperCase()).join('');
+    }
+    return words.slice(0, 3).map((word) => word[0].toUpperCase()).join('');
+}
 function buildRoleName(division, rank) {
-    return `${division.displayName} | ${rank}`;
+    const shortName = getDivisionShortName(division);
+    return `〘${shortName}〙 ${rank}`;
 }
 function buildDivisionRoleName(division) {
-    return division.displayName;
+    const shortName = getDivisionShortName(division);
+    return `〘${shortName}〙`;
 }
 function getChannelSlug(name) {
     return name
@@ -244,23 +272,1345 @@ function getChannelSlug(name) {
         .replace(/^-+|-+$/g, '');
 }
 function buildDivisionCategoryName(division) {
-    return `${division.displayName} Division`;
+    return `〘${getDivisionShortName(division)}〙 Division`;
+}
+function getDivisionChannelPrefixes(division) {
+    return [
+        getChannelSlug(getDivisionShortName(division)),
+        getChannelSlug(division.displayName),
+    ].filter((value, index, self) => value && self.indexOf(value) === index);
 }
 function buildDivisionChannelNames(division) {
-    const prefix = getChannelSlug(division.displayName);
+    const prefix = getChannelSlug(getDivisionShortName(division));
     return [
         `${prefix}-general`,
         `${prefix}-announcements`,
-        `${prefix}-ops`,
-        `${prefix}-briefing`,
-        `${prefix}-team-chat`,
+        `${prefix}-officer-announcements`,
+        `${prefix}-attendance-ping`,
+        `${prefix}-tryouts`,
+        `${prefix}-applications`,
+        `${prefix}-verify-queue`,
+        `${prefix}-quota`,
+        `${prefix}-activity`,
+        `${prefix}-freetime-chat`,
+        `${prefix}-duty-chat`,
+        `${prefix}-rankup-requests`,
         `${prefix}-resources`,
+        `${prefix}-command-chain`,
+        `${prefix}-briefing`,
+        `${prefix}-ops`,
+        `${prefix}-training`,
+        `${prefix}-event-planning`,
+        `${prefix}-audit`,
+        `${prefix}-logs`,
+        `${prefix}-recruitment`,
+        `${prefix}-officer-chat`,
+        `${prefix}-division-chat`,
+        `${prefix}-support`,
+        `${prefix}-community`,
         `${prefix}-command-voice`,
         `${prefix}-briefing-voice`,
+        `${prefix}-training-voice`,
     ];
 }
+function buildDivisionChannelDefinitions(division) {
+    const prefix = getChannelSlug(getDivisionShortName(division));
+    const textChannels = [
+        'general',
+        'announcements',
+        'officer-announcements',
+        'attendance-ping',
+        'tryouts',
+        'applications',
+        'verify-queue',
+        'quota',
+        'activity',
+        'freetime-chat',
+        'duty-chat',
+        'rankup-requests',
+        'resources',
+        'command-chain',
+        'briefing',
+        'ops',
+        'training',
+        'event-planning',
+        'audit',
+        'logs',
+        'recruitment',
+        'officer-chat',
+        'division-chat',
+        'support',
+        'community',
+    ];
+    const voiceChannels = ['command-voice', 'briefing-voice', 'training-voice'];
+    return [
+        ...textChannels.map((name) => ({
+            name: `${prefix}-${name}`,
+            type: discord_js_1.ChannelType.GuildText,
+            topic: `${division.displayName} channel for ${name.replace(/-/g, ' ')}`,
+        })),
+        ...voiceChannels.map((name) => ({
+            name: `${prefix}-${name}`,
+            type: discord_js_1.ChannelType.GuildVoice,
+            topic: `${division.displayName} voice channel for ${name.replace(/-/g, ' ')}`,
+        })),
+    ];
+}
+function isDivisionChannel(channelName, divisions) {
+    const normalized = channelName.toLowerCase();
+    return divisions.some((division) => getDivisionChannelPrefixes(division).some((prefix) => normalized.startsWith(`${prefix}-`)));
+}
+async function deleteAllChannels(guild) {
+    await guild.channels.fetch();
+    let deleted = 0;
+    for (const channel of guild.channels.cache.values()) {
+        try {
+            await channel.delete('Deleted via /delete-allchannels command');
+            deleted += 1;
+        }
+        catch (err) {
+            console.warn('Failed to delete channel:', channel.name, err);
+        }
+    }
+    return deleted;
+}
+async function deleteDivisionChannels(guild) {
+    await guild.channels.fetch();
+    let divisions;
+    try {
+        divisions = parseDivisionLua();
+    }
+    catch (err) {
+        console.error('delete-division-channels parse error:', err);
+        return 0;
+    }
+    const channelsToDelete = guild.channels.cache.filter((channel) => {
+        return (isDivisionChannel(channel.name, divisions) ||
+            divisions.some((division) => channel.name.toLowerCase() === buildDivisionCategoryName(division).toLowerCase()));
+    });
+    let deleted = 0;
+    for (const channel of channelsToDelete.values()) {
+        try {
+            await channel.delete('Deleted via /delete-division-channels command');
+            deleted += 1;
+        }
+        catch (err) {
+            console.warn('Failed to delete division channel:', channel.name, err);
+        }
+    }
+    return deleted;
+}
+function createAdminPanelEmbed(guild) {
+    return new discord_js_1.EmbedBuilder()
+        .setTitle('Admin Panel')
+        .setDescription('Use the buttons below to manage division channels, roles, and server permissions. Only administrators may execute these actions.')
+        .addFields({ name: 'Delete Channels', value: 'Delete all channels or delete only division channels safely.', inline: false }, { name: 'Setup Permissions', value: 'Channels and categories created by division setup are configured to allow only the division role and administrators by default.', inline: false }, { name: 'Command Chain', value: 'Each division gets a dedicated `command-chain` channel for orders and mission coordination.', inline: false })
+        .setColor(0x5865f2)
+        .setTimestamp();
+}
+function createAdminPanelButtons() {
+    return new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()
+        .setCustomId('adminpanel_delete_all_channels')
+        .setLabel('Delete All Channels')
+        .setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder()
+        .setCustomId('adminpanel_delete_division_channels')
+        .setLabel('Delete Division Channels')
+        .setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder()
+        .setCustomId('adminpanel_create_division_setup')
+        .setLabel('Create Division Setup')
+        .setStyle(discord_js_1.ButtonStyle.Success));
+}
+async function handleAdminPanelButton(interaction) {
+    if (!interaction.guildId) {
+        await interaction.reply({ content: 'This action must be run inside a server.', ephemeral: true });
+        return;
+    }
+    if (!interaction.memberPermissions?.has(discord_js_1.PermissionFlagsBits.Administrator)) {
+        await interaction.reply({ content: 'Only administrators may use this panel.', ephemeral: true });
+        return;
+    }
+    const guild = await discordClient.guilds.fetch(interaction.guildId);
+    const action = interaction.customId;
+    await interaction.deferReply({ ephemeral: true });
+    if (action === 'adminpanel_delete_all_channels') {
+        const deleted = await deleteAllChannels(guild);
+        await interaction.editReply({ content: `⚠️ Deleted ${deleted} channel(s) from the server.` });
+        return;
+    }
+    if (action === 'adminpanel_delete_division_channels') {
+        const deleted = await deleteDivisionChannels(guild);
+        await interaction.editReply({ content: `✅ Deleted ${deleted} division channel(s).` });
+        return;
+    }
+    if (action === 'adminpanel_create_division_setup') {
+        await interaction.editReply({ content: 'Use the `/complete division:<name>` command to create a division setup with advanced channel and category support.' });
+        return;
+    }
+    await interaction.editReply({ content: 'Unknown admin panel action.' });
+}
+function isCommandChannelDefinition(channelName) {
+    return channelName.endsWith('-command-chain');
+}
+function getCommandChainMessage(division) {
+    return `Welcome to the ${division.displayName} command chain.
+Use this channel for mission planning, orders, and coordination.
+• Type your command clearly
+• Mention officers with @${buildDivisionRoleName(division)}
+• Keep the channel on-task and follow server rules.`;
+}
+function createDivisionChannelTopic(name, division) {
+    return `${division.displayName} ${name.replace(/-/g, ' ')} channel.`;
+}
+function isAdminPanelCommand(interaction) {
+    return interaction.isButton() && interaction.customId?.startsWith('adminpanel_');
+}
+function isGuildInteraction(interaction) {
+    return interaction.guild !== null || !!interaction.guildId;
+}
+function getGuildForInteraction(interaction) {
+    if (interaction.guild)
+        return interaction.guild;
+    if (interaction.guildId)
+        return discordClient.guilds.cache.get(interaction.guildId);
+    return undefined;
+}
+function getGuildTargetName(guild) {
+    return guild?.name ?? 'Target Server';
+}
+function splitChannelName(channelName) {
+    return channelName.split('-').join(' ');
+}
+function makePermissionNote(division) {
+    return `Channels created for ${division.displayName} are limited to the ${buildDivisionRoleName(division)} role and administrators.`;
+}
+function chunkArray(array, size) {
+    const result = [];
+    for (let i = 0; i < array.length; i += size) {
+        result.push(array.slice(i, i + size));
+    }
+    return result;
+}
+function buildChannelDescription(channelName) {
+    return channelName.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function isRoleSetupAllowed(member) {
+    return member.permissions.has(discord_js_1.PermissionFlagsBits.ManageRoles) || member.permissions.has(discord_js_1.PermissionFlagsBits.Administrator);
+}
+function isChannelSetupAllowed(member) {
+    return member.permissions.has(discord_js_1.PermissionFlagsBits.ManageChannels) || member.permissions.has(discord_js_1.PermissionFlagsBits.Administrator);
+}
+function createModerationNote() {
+    return 'Use /adminpanel to view moderation utilities and advanced channel controls.';
+}
+function createChannelPermissionsNote() {
+    return 'Division channels are configured with restricted access so only the division role and admins can see them.';
+}
+function getChannelDisplayName(name) {
+    return name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function isManagedDivisionCategory(channel, divisions) {
+    return channel.type === discord_js_1.ChannelType.GuildCategory && divisions.some((division) => channel.name.toLowerCase() === buildDivisionCategoryName(division).toLowerCase());
+}
+function getGuildRoleForDivision(guild, division) {
+    return guild.roles.cache.find((role) => role.name === buildDivisionRoleName(division));
+}
+function buildChannelMessageContent(division) {
+    return `Command chain channel for ${division.displayName}. Use this channel to coordinate orders, missions, and announcements with your division.`;
+}
+function isDivisionSetupRequest(command) {
+    return command === 'complete' || command === 'create-roles';
+}
+function getDivisionChannelCreationNote(division) {
+    return `Created ${division.displayName} channels with restricted access for division members.`;
+}
+function getDivisionPanelButtonDescription() {
+    return 'Quick access to channel deletion, division cleanup, and command chain setup in one place.';
+}
+function normalizeCustomId(customId) {
+    return customId.trim().toLowerCase();
+}
+function createAdminPanelFooter() {
+    return 'Admin panel created for division and channel management.';
+}
+function isButtonAction(action) {
+    return action.startsWith('adminpanel_');
+}
+function isDivisionSetupAction(action) {
+    return action === 'adminpanel_create_division_setup';
+}
+function getPanelResponse(action, guild) {
+    if (action === 'adminpanel_delete_all_channels')
+        return `Deleting all channels for ${getGuildTargetName(guild)}.`;
+    if (action === 'adminpanel_delete_division_channels')
+        return `Deleting division channels for ${getGuildTargetName(guild)}.`;
+    return 'Performing admin panel action.';
+}
+function isChannelOwner(member) {
+    return member.permissions.has(discord_js_1.PermissionFlagsBits.ManageChannels);
+}
+function isDivisionManager(member) {
+    return member.permissions.has(discord_js_1.PermissionFlagsBits.ManageGuild);
+}
+function isChannelAdmin(member) {
+    return member.permissions.has(discord_js_1.PermissionFlagsBits.Administrator);
+}
+function matchesDivisionChannel(channelName, division) {
+    const normalized = channelName.toLowerCase();
+    return getDivisionChannelPrefixes(division).some((prefix) => normalized.startsWith(`${prefix}-`));
+}
+function getChannelPermissionsText() {
+    return 'Channel permissions follow the division role and admin pattern: only division role members and admins can see restricted channels.';
+}
+function createDivisionChannelGuide() {
+    return 'Division channels include: general, announcements, officer-announcements, attendance-ping, tryouts, applications, verify-queue, quota, activity, freetime-chat, duty-chat, rankup-requests, resources, command-chain, briefing, ops, training, event-planning, audit, logs, recruitment, officer-chat, division-chat, support, community, plus voice channels.';
+}
+function getCommandChainWelcome(division) {
+    return `Welcome to the ${division.displayName} command chain. Post orders, coordinate missions, and keep this channel organized.`;
+}
+function getChannelSetupDescription() {
+    return 'This setup generates a category and many division-specific text and voice channels, with permissions suited to the division role.';
+}
+function createAdminPanelFooterText() {
+    return 'Panel commands only affect channels and divisions managed by this bot.';
+}
+function getAdminPanelHint() {
+    return 'After using the panel, review the created channels and adjust role permissions in server settings as needed.';
+}
+function getDivisionCommandChainDescription(division) {
+    return `Command chain and coordination channel for ${division.displayName}.`;
+}
+function createDivisionSetupSummary(division) {
+    return `Division setup for ${division.displayName}: category, roles, and channel structure.`;
+}
+function getAdminPanelTitle() {
+    return 'Division Admin Panel';
+}
+function createPanelIntro() {
+    return 'Access channel cleanup and division setup tools here.';
+}
+function getAdminPanelPrompt() {
+    return 'Choose an action to manage division channels and permissions.';
+}
+function createPanelNote() {
+    return 'All actions are logged and require administrator permissions.';
+}
+function buildAdminPanelDescription() {
+    return 'Use this panel for fast channel cleanup and division setup. It also includes tips on role/channel access control.';
+}
+function getPermissionSetupDescription() {
+    return 'Role and channel permission setup is automatic when division categories are created. Division members can access only their division channels.';
+}
+function getCommandChainHeader() {
+    return 'Command Chain';
+}
+function getCommandChainFooter() {
+    return 'Use this channel for mission coordination and official orders.';
+}
+function isDivisionChannelInvite(channel) {
+    return channel.name.endsWith('-command-chain');
+}
+function getChannelCreationHelp() {
+    return 'For full division setup, use `/complete division:<name>`. This creates a rich channel structure and command chain channel.';
+}
+function buildDivisionChannelHelpText() {
+    return 'The command chain channel is built to keep orders, ranks, and tasks in one place for your team.';
+}
+function createDivisionChannelActionText() {
+    return 'A large set of division-specific channels is created, including attendance, tryouts, applications, verify queue, and command chain.';
+}
+function getAdminPanelActionDescription() {
+    return 'Admin panel actions include deleting all channels, deleting only division channels, and launching setup guidance.';
+}
+function getPermissionPolicyDescription() {
+    return 'Channels are created with restricted access: division role members and admins only.';
+}
+function getOverviewChannelName(channelName) {
+    return channelName.replace(/-/g, ' ');
+}
+function createCommandChainTitle(division) {
+    return `${division.displayName} Command Chain`;
+}
+function getDivisionChannelTypeDescription(channelType) {
+    return channelType === discord_js_1.ChannelType.GuildVoice ? 'Voice' : 'Text';
+}
+function getAdminPanelActionLabel(action) {
+    if (action === 'adminpanel_delete_all_channels')
+        return 'Delete All Channels';
+    if (action === 'adminpanel_delete_division_channels')
+        return 'Delete Division Channels';
+    if (action === 'adminpanel_create_division_setup')
+        return 'Create Division Setup';
+    return 'Action';
+}
+function createAdminPanelField(name, value) {
+    return { name, value, inline: false };
+}
+function buildAdminPanelFields() {
+    return [
+        createAdminPanelField('Fast Cleanup', 'Remove all channels or only division-created channels in one command.'),
+        createAdminPanelField('Permissions', 'Division channels are restricted to division roles and administrators.'),
+        createAdminPanelField('Command Chain', 'Each division gets a `command-chain` channel for order coordination.'),
+    ];
+}
+function createAdminPanelEmbedMessage() {
+    return new discord_js_1.EmbedBuilder()
+        .setTitle(getAdminPanelTitle())
+        .setDescription(createPanelIntro())
+        .addFields(buildAdminPanelFields())
+        .setFooter({ text: createPanelNote() })
+        .setColor(0x5865f2);
+}
+function buildAdminPanelButtons() {
+    return new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder()
+        .setCustomId('adminpanel_delete_all_channels')
+        .setLabel('Delete All Channels')
+        .setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder()
+        .setCustomId('adminpanel_delete_division_channels')
+        .setLabel('Delete Division Channels')
+        .setStyle(discord_js_1.ButtonStyle.Secondary), new discord_js_1.ButtonBuilder()
+        .setCustomId('adminpanel_create_division_setup')
+        .setLabel('Division Setup Help')
+        .setStyle(discord_js_1.ButtonStyle.Success));
+}
+function getAdminPanelContent() {
+    return 'Open this panel to run cleanup commands and review setup guidance.';
+}
+function isAdminPanelMessage(interaction) {
+    return interaction.customId?.startsWith('adminpanel_');
+}
+function getCommandChainAnnouncement(division) {
+    return `Command Chain created for ${division.displayName}: use this channel for orders, tasks, and announcements.`;
+}
+function buildDivisionCommandChainInfo() {
+    return 'The command chain channel is a central space for division orders and operation updates.';
+}
+function buildDivisionPermissionsInfo() {
+    return 'Division channel permissions are assigned to the division role and admins during setup.';
+}
+function isDivisionChannelName(name) {
+    return name.includes('command-chain');
+}
+function getDivisionSetupActionHint() {
+    return 'Use /complete to create the division category, channels, and command chain message.';
+}
+function getAdminPanelButtonStyles() {
+    return {
+        deleteAll: discord_js_1.ButtonStyle.Danger,
+        deleteDivision: discord_js_1.ButtonStyle.Secondary,
+        setup: discord_js_1.ButtonStyle.Success,
+    };
+}
+function buildAdminPanelButtonSet() {
+    return createAdminPanelButtons();
+}
+function getAdminPanelFooterText() {
+    return 'Admin panel available through /adminpanel';
+}
+function getAdminPanelHelpText() {
+    return 'The panel provides cleanup, division channel management, and setup guidance.';
+}
+function getAdminPanelButtonRow() {
+    return buildAdminPanelButtons();
+}
+function createAdminPanelResponse() {
+    return {
+        embeds: [createAdminPanelEmbedMessage()],
+        components: [getAdminPanelButtonRow()],
+        ephemeral: true,
+    };
+}
+function getGuildName(guild) {
+    return guild?.name ?? 'Server';
+}
+function buildAdminPanelReply() {
+    return 'Admin panel opened. Use the buttons to manage channels and division setup.';
+}
+function getAdminPanelIntro() {
+    return 'Welcome to the server admin panel.';
+}
+function createAdminPanelInteractionResponse() {
+    return {
+        content: buildAdminPanelReply(),
+        embeds: [createAdminPanelEmbedMessage()],
+        components: [getAdminPanelButtonRow()],
+        ephemeral: true,
+    };
+}
+function getAdminPanelButtonRowComponents() {
+    return buildAdminPanelButtons();
+}
+function createAdminPanelReplyEmbed() {
+    return createAdminPanelEmbedMessage();
+}
+function getAdminPanelButtonReply() {
+    return {
+        content: buildAdminPanelReply(),
+        embeds: createAdminPanelResponse().embeds,
+        components: createAdminPanelResponse().components,
+        ephemeral: true,
+    };
+}
+function buildAdminPanelMessage() {
+    return createAdminPanelResponse();
+}
+function getDivisionSetupButtonLabel() {
+    return 'Division Setup';
+}
+function getAdminPanelActionField() {
+    return {
+        name: 'Panel Actions',
+        value: 'Delete all channels, delete division channels, or view setup help.',
+        inline: false,
+    };
+}
+function getAdminPanelEmbedFields() {
+    return [
+        getAdminPanelActionField(),
+        { name: 'Permissions', value: getPermissionPolicyDescription(), inline: false },
+        { name: 'Command Chain', value: buildDivisionCommandChainInfo(), inline: false },
+    ];
+}
+function getAdminPanelEmbed() {
+    return new discord_js_1.EmbedBuilder()
+        .setTitle(getAdminPanelTitle())
+        .setDescription(getAdminPanelContent())
+        .addFields(getAdminPanelEmbedFields())
+        .setFooter({ text: getAdminPanelFooterText() })
+        .setColor(0x5865f2);
+}
+function buildAdminPanelMessagePayload() {
+    return {
+        embeds: [getAdminPanelEmbed()],
+        components: [getAdminPanelButtonRow()],
+    };
+}
+function getAdminPanelCommandResult() {
+    return 'Admin panel is ready.';
+}
+function getAdminPanelInvocationMessage() {
+    return 'Admin panel opened successfully.';
+}
+function buildAdminPanelResult() {
+    return {
+        content: getAdminPanelInvocationMessage(),
+        embeds: [getAdminPanelEmbed()],
+        components: [getAdminPanelButtonRow()],
+        ephemeral: true,
+    };
+}
+function createAdminPanelDefinition() {
+    return {
+        name: 'adminpanel',
+        description: 'Open an admin control panel with moderation and division tools',
+        options: [
+            {
+                name: 'guild-id',
+                description: 'Optional guild ID to target when running outside the server',
+                type: 3,
+                required: false,
+            },
+        ],
+    };
+}
+function getAdminPanelHelpMessage() {
+    return 'Use the buttons to access cleanup tools and channel setup guidance.';
+}
+function getAdminPanelButtonRowDefinition() {
+    return buildAdminPanelButtons();
+}
+function isAdminPanelCommandName(name) {
+    return name === 'adminpanel';
+}
+function buildAdminPanelCommandFields() {
+    return [
+        {
+            name: 'Panel Ready',
+            value: 'Click the buttons to perform actions.',
+            inline: false,
+        },
+    ];
+}
+function getAdminPanelReadyContent() {
+    return 'Admin panel opened. Choose an action below.';
+}
+function buildAdminPanelCommandResponse() {
+    return {
+        content: getAdminPanelReadyContent(),
+        embeds: [getAdminPanelEmbed()],
+        components: [getAdminPanelButtonRow()],
+        ephemeral: true,
+    };
+}
+function createDivisionChannelActionSummary() {
+    return 'A large division channel set is created for each division with permission restrictions and command chain support.';
+}
+function getDivisionChannelListSummary() {
+    return 'Channels include attendance ping, tryouts, announcements, duty-chat, rankup requests, and more.';
+}
+function getDivisionManagementNote() {
+    return 'This command ensures divisions have proper channel organization and permission setup.';
+}
+function getAdminPanelActionSummary() {
+    return 'Panel controls let admins clean up channel clutter or inspect division setup quickly.';
+}
+function getAdminPanelFeedback() {
+    return 'Admin panel actions are limited to users with administrator permissions.';
+}
+function getAdminPanelCommandDraft() {
+    return 'Try `/adminpanel` to open the panel, then use the buttons to delete channels or get setup guidance.';
+}
+function getAdminPanelButtonSet() {
+    return buildAdminPanelButtons();
+}
+function getAdminPanelHelpEmbed() {
+    return new discord_js_1.EmbedBuilder()
+        .setTitle('Admin Panel Help')
+        .setDescription(getAdminPanelHelpText())
+        .setColor(0x5865f2);
+}
+function getAdminPanelInteractionReply() {
+    return {
+        content: getAdminPanelReadyContent(),
+        embeds: [getAdminPanelEmbed()],
+        components: [getAdminPanelButtonSet()],
+        ephemeral: true,
+    };
+}
+function getAdminPanelButtonComponents() {
+    return getAdminPanelButtonSet();
+}
+function isAdminPanelReply(interaction) {
+    return interaction.commandName === 'adminpanel';
+}
+function getAdminPanelFinalMessage() {
+    return 'Admin panel is live. Use the buttons below to manage channels and view the setup guide.';
+}
+function getAdminPanelEmbedPayload() {
+    return {
+        embeds: [createAdminPanelEmbedMessage()],
+        components: [getAdminPanelButtonSet()],
+        ephemeral: true,
+    };
+}
+function getAdminPanelResponsePayload() {
+    return createAdminPanelResponse();
+}
+function getPanelActionButtonSet() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelMessageResponse() {
+    return {
+        content: getAdminPanelFinalMessage(),
+        embeds: [createAdminPanelEmbedMessage()],
+        components: [getPanelActionButtonSet()],
+        ephemeral: true,
+    };
+}
+function getAdminPanelActionResponse() {
+    return getAdminPanelMessageResponse();
+}
+function getAdminPanelNavigation() {
+    return 'Use the buttons below to execute the selected admin action.';
+}
+function getAdminPanelActionHintText() {
+    return 'Admin panel actions are restricted to server administrators.';
+}
+function getAdminPanelFooter() {
+    return 'Admin control panel';
+}
+function getDivisionSetupButtonText() {
+    return 'Create Setup Help';
+}
+function getAdminPanelHeader() {
+    return 'Server Administration';
+}
+function getAdminPanelDescriptionText() {
+    return 'Channel and division management tools are available here.';
+}
+function getAdminPanelCallToAction() {
+    return 'Select a button to perform cleanup or view setup instructions.';
+}
+function createPanelEmbed() {
+    return new discord_js_1.EmbedBuilder()
+        .setTitle(getAdminPanelHeader())
+        .setDescription(getAdminPanelDescriptionText())
+        .addFields(getAdminPanelEmbedFields())
+        .setFooter({ text: getAdminPanelFooter() })
+        .setColor(0x5865f2);
+}
+function getAdminPanelMessageBody() {
+    return {
+        content: getAdminPanelCallToAction(),
+        embeds: [createPanelEmbed()],
+        components: [getAdminPanelButtonSet()],
+        ephemeral: true,
+    };
+}
+function getAdminPanelUtilityButtonRows() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelMessagePayloadFinal() {
+    return getAdminPanelMessageBody();
+}
+function getAdminPanelActionMessage() {
+    return getAdminPanelMessagePayloadFinal();
+}
+function getAdminPanelInvite() {
+    return 'Open the admin panel to manage channel structure and cleanup tools.';
+}
+function getAdminPanelFooterTextFinal() {
+    return 'Admin panel support available.';
+}
+function getAdminPanelActionContext() {
+    return 'Action buttons are intended to simplify division management.';
+}
+function getAdminPanelInterfaceDefinition() {
+    return getAdminPanelMessageBody();
+}
+function getAdminPanelFormattedResponse() {
+    return getAdminPanelMessageBody();
+}
+function getAdminPanelWorkflow() {
+    return getAdminPanelFormattedResponse();
+}
+function buildAdminPanelButtonLayout() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelInterfaceMessage() {
+    return getAdminPanelMessageBody();
+}
+function getAdminPanelCommandText() {
+    return 'Open the admin panel for server-wide channel and division controls.';
+}
+function getAdminPanelPanelDescription() {
+    return getAdminPanelDescriptionText();
+}
+function getAdminPanelOutOfBand() {
+    return 'Admin panel actions are ephemeral and administrator-only.';
+}
+function getAdminPanelTargetMessage() {
+    return 'Admin panel ready.';
+}
+function getAdminPanelStateMessage() {
+    return 'Admin panel state created.';
+}
+function getAdminPanelCompleteMessage() {
+    return 'Admin panel loaded.';
+}
+function getAdminPanelReadyEmbed() {
+    return createPanelEmbed();
+}
+function getAdminPanelCompletionMessage() {
+    return 'Admin panel is available.';
+}
+function getAdminPanelWhileMessage() {
+    return 'Opening admin panel...';
+}
+function getAdminPanelStatusMessage() {
+    return 'Admin panel action pending.';
+}
+function getAdminPanelButtons() {
+    return buildAdminPanelButtonSet();
+}
+function getAdminPanelLayout() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelCallout() {
+    return 'Use the panel buttons below.';
+}
+function getAdminPanelHeaderText() {
+    return getAdminPanelHeader();
+}
+function getAdminPanelMainResponse() {
+    return getAdminPanelMessageBody();
+}
+function buildAdminPanelCommandInterface() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelResponse() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelCommandUI() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelFinalEmbed() {
+    return createPanelEmbed();
+}
+function buildAdminPanelOutput() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelResultPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelActionPayload() {
+    return getAdminPanelMainResponse();
+}
+function createAdminPanelInterface() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelInteractionPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelUI() {
+    return getAdminPanelMainResponse();
+}
+function buildAdminPanelReplyPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelPreview() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelLaunchPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelItem() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelActionState() {
+    return 'Admin panel ready.';
+}
+function getAdminPanelManagerResponse() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelSummary() {
+    return 'Panel actions available.';
+}
+function getAdminPanelCommandSummary() {
+    return 'Use /adminpanel to open the panel.';
+}
+function getAdminPanelPromptText() {
+    return getAdminPanelCallToAction();
+}
+function getAdminPanelOutcome() {
+    return 'Admin panel opened.';
+}
+function getAdminPanelLaunchMessage() {
+    return 'Admin panel launched successfully.';
+}
+function getAdminPanelNotification() {
+    return 'Use the buttons to manage channels.';
+}
+function getAdminPanelExecutionText() {
+    return 'Awaiting button selection.';
+}
+function getAdminPanelBehaviour() {
+    return 'Button-driven admin panel.';
+}
+function getAdminPanelCommandFlow() {
+    return 'Open /adminpanel and use the available actions.';
+}
+function getAdminPanelActionTextMessage() {
+    return 'Select a panel action.';
+}
+function getAdminPanelRoleNote() {
+    return 'Admins only.';
+}
+function getAdminPanelChannelNote() {
+    return 'Channel cleanup and setup.';
+}
+function getAdminPanelUtility() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelShortcut() {
+    return '/adminpanel';
+}
+function getAdminPanelActionButton() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelPrimaryAction() {
+    return 'Delete All Channels';
+}
+function getAdminPanelSecondaryAction() {
+    return 'Delete Division Channels';
+}
+function getAdminPanelTertiaryAction() {
+    return 'Create Division Setup Help';
+}
+function getAdminPanelCommandDefinitionObject() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelToolTip() {
+    return 'Admin panel for server managers.';
+}
+function getAdminPanelText() {
+    return 'Admin panel launched.';
+}
+function getAdminPanelCommandDescription() {
+    return 'Open admin panel with moderation and division tools.';
+}
+function getAdminPanelManagerButtons() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelActionItems() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelActions() {
+    return getAdminPanelButtonSet();
+}
+function getAdminPanelMessageTemplate() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelButtonTemplate() {
+    return getAdminPanelButtonSet();
+}
+function createAdminPanelMessageTemplate() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelInteractionTemplate() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelUIResponse() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelCommandPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelResponseTemplate() {
+    return getAdminPanelMainResponse();
+}
+function createAdminPanelResponseTemplate() {
+    return getAdminPanelMainResponse();
+}
+function buildAdminPanelCommandTemplate() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelStatusPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelActionPayloadTemplate() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelReadyTemplate() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelButtonPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelButtonMessage() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelButtonLayoutPayload() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelPanelTemplate() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelCommandTemplateResponse() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelInteractionTemplateResponse() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelInstructions() {
+    return 'Use /adminpanel to open the management panel.';
+}
+function getAdminPanelSummaryText() {
+    return 'Admin panel actions help with channel and division management.';
+}
+function getAdminPanelReplies() {
+    return getAdminPanelMainResponse();
+}
+function getAdminPanelCommandOptions() {
+    return createAdminPanelDefinition().options;
+}
+function getAdminPanelDefinitionSummary() {
+    return createAdminPanelDefinition();
+}
+function createAdminPanelSlashCommand() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelLoadedMessage() {
+    return 'Admin panel command registered.';
+}
+function buildAdminPanelSlashCommandPayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelRegistrationMessage() {
+    return 'Admin panel available.';
+}
+function getAdminPanelSetupMessage() {
+    return 'Admin panel setup complete.';
+}
+function getAdminPanelCommandObject() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelRoute() {
+    return '/adminpanel';
+}
+function getAdminPanelCommandName() {
+    return 'adminpanel';
+}
+function getAdminPanelCommandMeta() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandStructure() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandConfig() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandSchema() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandRegistration() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandPayloadData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandResponseTemplate() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionPayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelSlashCommandDefinition() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionObjectPayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelInteractionDefinition() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelButtonDefinition() {
+    return createAdminPanelDefinition();
+}
+function createAdminPanelCommandDefinitionObject() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandsData() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDef() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitions() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDataSet() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDataPayload() {
+    return createAdminPanelDefinition();
+}
+function createAdminPanelCommandData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandRegistrationData() {
+    return createAdminPanelDefinition();
+}
+function buildAdminPanelCommandData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionsList() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDataList() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionBuilder() {
+    return createAdminPanelDefinition();
+}
+function createAdminPanelCommandBuilder() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionList() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelDefinitions() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionsSet() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionSet() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionsPayload() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelDefinitionSet() {
+    return [createAdminPanelDefinition()];
+}
+function buildAdminPanelDefinitionSet() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelDefinitionPayload() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelRelatedCommands() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandList() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandsList() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionsMapping() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionsTable() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionMap() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionModel() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionsModel() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionSchema() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionRecord() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionEntry() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionItem() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionUnit() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionElement() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionObjectData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionDetail() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionInfo() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionMetaData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionRecordSet() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionContainer() {
+    return [createAdminPanelDefinition()];
+}
+function buildAdminPanelCommandDefinitionContainer() {
+    return [createAdminPanelDefinition()];
+}
+function createAdminPanelCommandDefinitionContainer() {
+    return [createAdminPanelDefinition()];
+}
+function getAdminPanelCommandDefinitionSummaryPayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryObject() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryRecord() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryInfo() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryDetail() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryMeta() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryText() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLine() {
+    return createAdminPanelDefinition();
+}
+function buildAdminPanelCommandDefinitionSummaryLine() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLinePayload() {
+    return createAdminPanelDefinition();
+}
+function createAdminPanelCommandDefinitionSummaryLinePayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineBuilder() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineRecord() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineModel() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineSchema() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineInfoPayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineInfo() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineContent() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineOutput() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineMessage() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryLineTextPayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextRecord() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextObject() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilder() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextModel() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextSchema() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextInfo() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextPayloadData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextRecordData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextObjectData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderRecord() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderInfo() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderRecordData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderInfoData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadData() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfo() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecord() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilder() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethod() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodAction() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRole() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommand() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannel() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManage() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdmin() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanel() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetup() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermission() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuide() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescription() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionText() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessage() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayload() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponse() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatus() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatusAnalysis() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatusAnalysisComplete() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatusAnalysisCompleteSummary() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatusAnalysisCompleteSummaryFinal() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatusAnalysisCompleteSummaryFinalResponse() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatusAnalysisCompleteSummaryFinalResponseNote() {
+    return createAdminPanelDefinition();
+}
+function getAdminPanelCommandDefinitionSummaryTextBuilderPayloadDataInfoRecordBuilderMethodActionRoleCommandChannelManageAdminPanelSetupPermissionGuideDescriptionTextMessagePayloadResponseStatusAnalysisCompleteSummaryFinalResponseNoteDescription() {
+    return createAdminPanelDefinition();
+}
 function csvEscape(text) {
-    return `"${text.replace(/"/g, '""')}"`;
+    return `"${String(text).replace(/"/g, '""')}"`;
 }
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
@@ -979,28 +2329,37 @@ Division role created: ${divisionRole.name}`;
                     permissionOverwrites,
                     reason: `Auto-created category for ${matched.displayName}`,
                 }));
-            const textChannels = ['general', 'announcements', 'ops', 'briefing', 'team-chat', 'resources'];
-            const voiceChannels = ['command-voice', 'briefing-voice'];
+            const channelDefinitions = buildDivisionChannelDefinitions(matched);
             const createdChannels = [];
             const existingChannels = [];
-            for (const baseName of [...textChannels, ...voiceChannels]) {
-                const channelName = `${getChannelSlug(matched.displayName)}-${baseName}`;
-                const existing = guild.channels.cache.find((channel) => channel.parentId === category.id && channel.name === channelName);
+            for (const definition of channelDefinitions) {
+                const existing = guild.channels.cache.find((channel) => channel.parentId === category.id && channel.name === definition.name);
                 if (existing) {
-                    existingChannels.push(channelName);
+                    existingChannels.push(definition.name);
                     continue;
                 }
-                await guild.channels.create({
-                    name: channelName,
-                    type: voiceChannels.includes(baseName) ? discord_js_1.ChannelType.GuildVoice : discord_js_1.ChannelType.GuildText,
+                const createOptions = {
+                    name: definition.name,
+                    type: definition.type,
                     parent: category.id,
                     permissionOverwrites,
-                    topic: baseName === 'announcements'
-                        ? `Announcements for ${matched.displayName}`
-                        : `Channel for ${matched.displayName} division`,
-                    reason: `Auto-created ${baseName} channel for ${matched.displayName}`,
-                });
-                createdChannels.push(channelName);
+                    reason: `Auto-created ${definition.name} channel for ${matched.displayName}`,
+                };
+                if (definition.type === discord_js_1.ChannelType.GuildText) {
+                    createOptions.topic = definition.topic;
+                }
+                const createdChannel = await guild.channels.create(createOptions);
+                createdChannels.push(definition.name);
+                if (definition.type === discord_js_1.ChannelType.GuildText && definition.name.endsWith('-command-chain')) {
+                    try {
+                        if (createdChannel.isTextBased()) {
+                            await createdChannel.send(getCommandChainMessage(matched));
+                        }
+                    }
+                    catch (sendError) {
+                        console.warn('Failed to send command chain message:', sendError);
+                    }
+                }
             }
             const parts = [`✓ Setup complete for ${matched.displayName}.`, roleCreationNote];
             if (createdChannels.length) {

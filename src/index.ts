@@ -426,14 +426,15 @@ discordClient.once(Events.ClientReady, async () => {
     },
     {
       name: 'create-roles',
-      description: 'Automatically create roles from division.lua',
+      description: 'Automatically create division and rank roles from division.lua',
       options: [
         {
           name: 'scope',
-          description: 'Create either division or rank roles',
+          description: 'Create division roles, rank roles, or both',
           type: 3,
           required: false,
           choices: [
+            { name: 'all', value: 'all' },
             { name: 'division', value: 'division' },
             { name: 'rank', value: 'rank' },
           ],
@@ -442,14 +443,15 @@ discordClient.once(Events.ClientReady, async () => {
     },
     {
       name: 'role-list',
-      description: 'Export a CSV list of division roles and ranks',
+      description: 'Export a CSV list of division/rank roles with their Discord role IDs',
       options: [
         {
           name: 'scope',
-          description: 'Include division-level roles or full rank list',
+          description: 'Include division-level roles, rank roles, or both',
           type: 3,
           required: false,
           choices: [
+            { name: 'all', value: 'all' },
             { name: 'division', value: 'division' },
             { name: 'rank', value: 'rank' },
           ],
@@ -457,32 +459,30 @@ discordClient.once(Events.ClientReady, async () => {
       ],
     },
     {
-      name: 'delete',
-      description: 'Delete roles from the server',
+      name: 'delete-allroles',
+      description: '⚠️ DANGER: Delete all roles from the server',
+    },
+    {
+      name: 'delete-role',
+      description: 'Delete a specific role by name',
       options: [
         {
-          name: 'scope',
-          description: 'What to delete',
+          name: 'role-name',
+          description: 'The exact name of the role to delete',
           type: 3,
           required: true,
-          choices: [
-            { name: 'all roles', value: 'all' },
-            { name: 'division roles', value: 'divisions' },
-            { name: 'rank/visual roles', value: 'visual' },
-            { name: 'single role', value: 'single' },
-          ],
-        },
-        {
-          name: 'role-name',
-          description: 'Name of the role to delete (only for single role)',
-          type: 3,
-          required: false,
         },
       ],
     },
+    {
+      name: 'delete-visual-roles',
+      description: 'Delete all rank/visual roles created from division.lua',
+    },
   ];
 
-  try {
+  try { 
+
+
     if (discordClient.application?.commands) {
       await discordClient.application.commands.set(commandDefinition);
       console.log('[BOT] Registered global slash commands for verification and admin moderation');
@@ -604,7 +604,7 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    const scope = interaction.options.getString('scope') ?? 'division';
+    const scope = interaction.options.getString('scope') ?? 'all';
     let divisions: DivisionDefinition[];
     try {
       divisions = parseDivisionLua();
@@ -617,81 +617,69 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
     await guild.roles.fetch();
 
-    if (scope === 'rank') {
-      const rankRoles = divisions.flatMap((division) =>
-        division.ranks.map((rank) => ({
-          name: buildRoleName(division, rank),
+    const createDivisionRoles = scope === 'division' || scope === 'all';
+    const createRankRoles = scope === 'rank' || scope === 'all';
+
+    const divisionRoles = createDivisionRoles
+      ? divisions.map((division) => ({
+          name: buildDivisionRoleName(division),
           color: discordColorFromName(division.visualColor),
-          division: division.displayName,
+          type: 'division' as const,
         }))
-      );
+      : [];
 
-      const newRoles = rankRoles.filter((roleItem) => !guild.roles.cache.some((role) => role.name === roleItem.name));
-      const availableSlots = 250 - guild.roles.cache.size;
-      const existingRolesCount = rankRoles.length - newRoles.length;
+    const rankRoles = createRankRoles
+      ? divisions.flatMap((division) =>
+          division.ranks.map((rank) => ({
+            name: buildRoleName(division, rank),
+            color: discordColorFromName(division.visualColor),
+            type: 'rank' as const,
+          }))
+        )
+      : [];
 
-      console.log(`[create-roles] Total rank roles needed: ${rankRoles.length}, Already exist: ${existingRolesCount}, Need to create: ${newRoles.length}`);
-      console.log(`[create-roles] Sample roles to create:`, newRoles.slice(0, 5));
+    const requestedRoles = [...divisionRoles, ...rankRoles];
+    const existingRoles = guild.roles.cache;
+    const newRoles = requestedRoles.filter((roleItem) => !existingRoles.some((role) => role.name === roleItem.name));
+    const totalToCreate = newRoles.length;
+    const availableSlots = 250 - existingRoles.size;
 
-      if (newRoles.length === 0) {
-        const existingRoleNames = rankRoles
-          .filter((roleItem) => guild.roles.cache.some((role) => role.name === roleItem.name))
-          .map((r) => r.name)
-          .slice(0, 10);
-        const suffix = rankRoles.length > 10 ? `\n...and ${rankRoles.length - 10} more` : '';
-        await interaction.editReply({ content: `✓ All ${rankRoles.length} rank roles already exist in the server.\n\nExisting roles:\n${existingRoleNames.map(n => `• ${n}`).join('\n')}${suffix}\n\nTo recreate roles, use \`/delete all-roles\` first then run this command again.` });
-        return;
-      }
-
-      if (newRoles.length > availableSlots || newRoles.length > 180) {
-        await interaction.editReply({ content: `There are ${newRoles.length} rank roles to create, which exceeds Discord limits (max 180). Use "/create-roles scope:division" instead or create a smaller subset.` });
-        return;
-      }
-
-      let createdCount = 0;
-      const createdRoles: string[] = [];
-      for (const roleItem of newRoles) {
-        try {
-          await guild.roles.create({
-            name: roleItem.name,
-            color: roleItem.color,
-            reason: 'Auto-created rank role from division.lua',
-          });
-          createdCount += 1;
-          if (createdCount <= 15) {
-            createdRoles.push(`• ${roleItem.name}`);
-          }
-        } catch (err) {
-          console.warn('Failed to create rank role:', roleItem.name, err);
-        }
-      }
-
-      const displayRoles = createdRoles.join('\n') + (newRoles.length > 15 ? `\n...and ${newRoles.length - 15} more roles` : '');
-      await interaction.editReply({ content: `✓ Created ${createdCount} rank role(s) from division.lua!\n(${existingRolesCount} roles already existed)\n\n**Sample roles created:**\n${displayRoles}` });
+    if (totalToCreate === 0) {
+      const existingNames = requestedRoles.map((roleItem) => roleItem.name).slice(0, 15);
+      const suffix = requestedRoles.length > 15 ? `\n...and ${requestedRoles.length - 15} more` : '';
+      await interaction.editReply({
+        content: `✓ All requested roles already exist in the server.\n\nExisting roles:\n${existingNames.map((n) => `• ${n}`).join('\n')}${suffix}`,
+      });
       return;
     }
 
-    const divisionRoles = divisions.map((division) => ({
-      name: buildDivisionRoleName(division),
-      color: discordColorFromName(division.visualColor),
-    }));
+    if (totalToCreate > availableSlots || totalToCreate > 180) {
+      await interaction.editReply({ content: `There are ${totalToCreate} roles to create, which exceeds Discord limits or available role slots. Use "/create-roles scope:division" or "/create-roles scope:rank" instead, or reduce the total number of requested roles.` });
+      return;
+    }
 
-    const newDivisionRoles = divisionRoles.filter((roleItem) => !guild.roles.cache.some((role) => role.name === roleItem.name));
     let createdCount = 0;
-    for (const roleItem of newDivisionRoles) {
+    const createdNames: string[] = [];
+
+    for (const roleItem of newRoles) {
       try {
         await guild.roles.create({
           name: roleItem.name,
           color: roleItem.color,
-          reason: 'Auto-created division role from division.lua',
+          reason: `Auto-created ${roleItem.type} role from division.lua`,
         });
         createdCount += 1;
+        if (createdNames.length < 15) {
+          createdNames.push(roleItem.name);
+        }
       } catch (err) {
-        console.warn('Failed to create division role:', roleItem.name, err);
+        console.warn(`Failed to create ${roleItem.type} role:`, roleItem.name, err);
       }
     }
 
-    await interaction.editReply({ content: `Created ${createdCount} division role(s) from division.lua.` });
+    const existingRolesCount = requestedRoles.length - createdCount;
+    const createdSample = createdNames.join('\n') + (createdCount > 15 ? `\n...and ${createdCount - 15} more` : '');
+    await interaction.editReply({ content: `✓ Created ${createdCount} role(s) from division.lua.\n(${existingRolesCount} already existed)\n\nCreated roles:\n${createdSample}` });
     return;
   }
 
@@ -712,27 +700,38 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    const scope = interaction.options.getString('scope') ?? 'division';
-    const rows = ['division_key,division_name,rank,role_name,color,icon,notes'];
+    const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+    await guild.roles.fetch();
+
+    const scope = interaction.options.getString('scope') ?? 'all';
+    const rows = ['division_key,division_name,rank,role_name,role_id,color,icon,notes'];
 
     for (const division of divisions) {
-      if (scope === 'division') {
+      if (scope === 'division' || scope === 'all') {
+        const roleName = buildDivisionRoleName(division);
+        const roleId = guild.roles.cache.find((role) => role.name === roleName)?.id ?? '';
         rows.push([
           csvEscape(division.key),
           csvEscape(division.displayName),
           '',
-          csvEscape(buildDivisionRoleName(division)),
+          csvEscape(roleName),
+          csvEscape(roleId),
           csvEscape(division.visualColor),
           csvEscape(division.icon),
           csvEscape(division.notes),
         ].join(','));
-      } else {
+      }
+
+      if (scope === 'rank' || scope === 'all') {
         for (const rank of division.ranks) {
+          const roleName = buildRoleName(division, rank);
+          const roleId = guild.roles.cache.find((role) => role.name === roleName)?.id ?? '';
           rows.push([
             csvEscape(division.key),
             csvEscape(division.displayName),
             csvEscape(rank),
-            csvEscape(buildRoleName(division, rank)),
+            csvEscape(roleName),
+            csvEscape(roleId),
             csvEscape(division.visualColor),
             csvEscape(division.icon),
             csvEscape(division.notes),
@@ -744,11 +743,42 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     const csvBuffer = Buffer.from(rows.join('\r\n'), 'utf8');
     const attachment = new AttachmentBuilder(csvBuffer).setName('division_roles.csv');
 
-    await interaction.editReply({ content: 'Division role list generated.', files: [attachment] });
+    await interaction.editReply({ content: 'Division role list generated. Role IDs are included for roles found on this server.', files: [attachment] });
     return;
   }
 
-  if (interaction.commandName === 'delete') {
+  if (interaction.commandName === 'delete-allroles') {
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.guild) {
+      await interaction.editReply({ content: 'This command must be used in the server channel.' });
+      return;
+    }
+
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.editReply({ content: 'You need Administrator permission to delete all roles.' });
+      return;
+    }
+
+    const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+    await guild.roles.fetch();
+
+    let deletedCount = 0;
+    for (const role of guild.roles.cache.values()) {
+      if (role.id === guild.id) continue; // Skip @everyone
+      try {
+        await role.delete('Deleted via /delete-allroles command');
+        deletedCount += 1;
+      } catch (err) {
+        console.warn(`Failed to delete role: ${role.name}`, err);
+      }
+    }
+
+    await interaction.editReply({ content: `⚠️ Deleted ${deletedCount} role(s) from the server.` });
+    return;
+  }
+
+  if (interaction.commandName === 'delete-role') {
     await interaction.deferReply({ ephemeral: true });
 
     if (!interaction.guild) {
@@ -761,105 +791,70 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    const scope = interaction.options.getString('scope') ?? 'all-roles';
-    const singleRoleName = interaction.options.getString('role-name');
+    const roleName = interaction.options.getString('role-name', true);
+    const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+    await guild.roles.fetch();
+
+    const roleToDelete = guild.roles.cache.find((r) => r.name === roleName);
+    if (!roleToDelete) {
+      await interaction.editReply({ content: `Role "${roleName}" not found.` });
+      return;
+    }
+
+    try {
+      await roleToDelete.delete(`Deleted via /delete-role by ${interaction.user.tag}`);
+      await interaction.editReply({ content: `✓ Deleted role: ${roleName}` });
+    } catch (err) {
+      console.error('Failed to delete role:', err);
+      await interaction.editReply({ content: `Failed to delete role. Check bot permissions and role hierarchy.` });
+    }
+    return;
+  }
+
+  if (interaction.commandName === 'delete-visual-roles') {
+    await interaction.deferReply({ ephemeral: true });
+
+    if (!interaction.guild) {
+      await interaction.editReply({ content: 'This command must be used in the server channel.' });
+      return;
+    }
+
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageRoles)) {
+      await interaction.editReply({ content: 'You need Manage Roles permission to delete roles.' });
+      return;
+    }
+
+    let divisions: DivisionDefinition[];
+    try {
+      divisions = parseDivisionLua();
+    } catch (err) {
+      console.error('delete-visual-roles parse error:', err);
+      await interaction.editReply({ content: 'Unable to load division.lua.' });
+      return;
+    }
 
     const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
     await guild.roles.fetch();
 
-    if (scope === 'single') {
-      if (!singleRoleName) {
-        await interaction.editReply({ content: 'Please specify a role name to delete.' });
-        return;
-      }
+    const rankRoleNames = divisions.flatMap((division) =>
+      division.ranks.map((rank) => buildRoleName(division, rank))
+    );
+    const divisionRoleNames = divisions.map((d) => buildDivisionRoleName(d));
+    const allVisualNames = [...rankRoleNames, ...divisionRoleNames];
 
-      const roleToDelete = guild.roles.cache.find((role) => role.name === singleRoleName);
-      if (!roleToDelete) {
-        await interaction.editReply({ content: `Role "${singleRoleName}" not found in this server.` });
-        return;
-      }
-
-      try {
-        await roleToDelete.delete('Deleted via /delete command');
-        await interaction.editReply({ content: `✓ Deleted role: ${singleRoleName}` });
-      } catch (err) {
-        console.error('Failed to delete role:', err);
-        await interaction.editReply({ content: `Failed to delete role. Check bot permissions and role hierarchy.` });
-      }
-      return;
-    }
-
-    if (scope === 'divisions') {
-      let divisions: DivisionDefinition[];
-      try {
-        divisions = parseDivisionLua();
-      } catch (err) {
-        console.error('delete divisions parse error:', err);
-        await interaction.editReply({ content: 'Unable to load division.lua.' });
-        return;
-      }
-
-      const divisionRoleNames = divisions.map((d) => buildDivisionRoleName(d));
-      const rolesToDelete = guild.roles.cache.filter((role) => divisionRoleNames.includes(role.name));
-      let deletedCount = 0;
-
-      for (const role of rolesToDelete.values()) {
-        try {
-          await role.delete('Deleted via /delete division roles');
-          deletedCount += 1;
-        } catch (err) {
-          console.warn('Failed to delete division role:', role.name, err);
-        }
-      }
-
-      await interaction.editReply({ content: `✓ Deleted ${deletedCount} division role(s).` });
-      return;
-    }
-
-    if (scope === 'visual') {
-      let divisions: DivisionDefinition[];
-      try {
-        divisions = parseDivisionLua();
-      } catch (err) {
-        console.error('delete visual parse error:', err);
-        await interaction.editReply({ content: 'Unable to load division.lua.' });
-        return;
-      }
-
-      const rankRoleNames = divisions.flatMap((division) =>
-        division.ranks.map((rank) => buildRoleName(division, rank))
-      );
-      const rolesToDelete = guild.roles.cache.filter((role) => rankRoleNames.includes(role.name));
-      let deletedCount = 0;
-
-      for (const role of rolesToDelete.values()) {
-        try {
-          await role.delete('Deleted via /delete visual roles');
-          deletedCount += 1;
-        } catch (err) {
-          console.warn('Failed to delete visual role:', role.name, err);
-        }
-      }
-
-      await interaction.editReply({ content: `✓ Deleted ${deletedCount} rank/visual role(s).` });
-      return;
-    }
-
-    // scope === 'all'
+    const rolesToDelete = guild.roles.cache.filter((role) => allVisualNames.includes(role.name));
     let deletedCount = 0;
-    for (const role of guild.roles.cache.values()) {
-      // Skip @everyone role
-      if (role.id === guild.id) continue;
 
+    for (const role of rolesToDelete.values()) {
       try {
-        await role.delete('Deleted via /delete all roles');
+        await role.delete('Deleted via /delete-visual-roles');
         deletedCount += 1;
       } catch (err) {
-        console.warn('Failed to delete role:', role.name, err);
+        console.warn(`Failed to delete visual role: ${role.name}`, err);
       }
     }
 
-    await interaction.editReply({ content: `⚠️ Deleted ${deletedCount} role(s) from the server.` });
+    await interaction.editReply({ content: `✓ Deleted ${deletedCount} visual/rank role(s).` });
     return;
   }
 
@@ -870,7 +865,9 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
   await interaction.deferReply({ ephemeral: true });
 
   const rawInput = interaction.options.getString('username') ?? interaction.options.getString('code');
+
   const robloxUsername = rawInput ? rawInput.trim() : '';
+
   if (!robloxUsername) {
     await interaction.editReply({ content: 'Please provide your Roblox username.' });
     return;

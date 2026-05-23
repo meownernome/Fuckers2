@@ -355,7 +355,7 @@ async function resolveDefaultGuild() {
   return await discordClient.guilds.fetch(DISCORD_GUILD_ID);
 }
 
-async function findDiscordMemberAcrossGuilds(discordId: string) {
+async function findDiscordRoleIdsAcrossGuilds(discordId: string) {
   const guildIds = new Set<string>();
   if (DISCORD_GUILD_ID) {
     guildIds.add(DISCORD_GUILD_ID);
@@ -364,22 +364,37 @@ async function findDiscordMemberAcrossGuilds(discordId: string) {
     if (config.id) guildIds.add(config.id);
   }
   for (const guild of discordClient.guilds.cache.values()) {
-    if (guild.id) guildIds.add(guild.id);
+    guildIds.add(guild.id);
   }
+
+  const roleIdSet = new Set<string>();
+  const foundGuilds: string[] = [];
 
   for (const guildId of guildIds) {
     try {
       const guild = await discordClient.guilds.fetch(guildId);
       const member = await guild.members.fetch({ user: discordId, force: true });
       if (member) {
-        return { guild, member };
+        foundGuilds.push(guild.id);
+        for (const role of member.roles.cache.values()) {
+          if (role && role.id) {
+            roleIdSet.add(role.id);
+          }
+        }
       }
     } catch (_err) {
       continue;
     }
   }
 
-  return null;
+  if (foundGuilds.length === 0) {
+    return null;
+  }
+
+  return {
+    guildIds: foundGuilds,
+    roleIds: Array.from(roleIdSet),
+  };
 }
 
 function generateVerificationCode(): string {
@@ -475,14 +490,14 @@ app.post('/api/game/check-roles', async (req: Request, res: Response) => {
   console.log('[API] check-roles request for robloxId=', robloxId, 'discordId=', discordId);
 
   try {
-    const memberSearch = await findDiscordMemberAcrossGuilds(discordId);
-    if (!memberSearch) {
+    const roleSearch = await findDiscordRoleIdsAcrossGuilds(discordId);
+    if (!roleSearch) {
       console.warn('[API] Could not find Discord member in any tracked guild for', discordId);
       return res.status(404).json({ error: 'Discord member not found in any linked server.' });
     }
 
-    const roleIds = memberSearch.member.roles.cache.map((role: Role) => role.id);
-    console.log('[API] discord role ids for member=', roleIds, 'guild=', memberSearch.guild.id);
+    const roleIds = roleSearch.roleIds;
+    console.log('[API] discord role ids for member=', roleIds, 'guilds=', roleSearch.guildIds);
 
     const response = await supabase
       .from('role_mappings')

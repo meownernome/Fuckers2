@@ -452,6 +452,12 @@ discordClient.once(Events.ClientReady, async () => {
             { name: 'rank', value: 'rank' },
           ],
         },
+        {
+          name: 'division',
+          description: 'Optional: create roles only for a specific division key or display name, or use all',
+          type: 3,
+          required: false,
+        },
       ],
     },
     {
@@ -618,6 +624,7 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     }
 
     const scope = interaction.options.getString('scope') ?? 'all';
+    const divisionArg = interaction.options.getString('division')?.trim();
     let divisions: DivisionDefinition[];
     try {
       divisions = parseDivisionLua();
@@ -627,6 +634,20 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
+    let targetDivisions = divisions;
+    if (divisionArg && divisionArg.toLowerCase() !== 'all') {
+      const lowerArg = divisionArg.toLowerCase();
+      const matched = divisions.find(
+        (division) =>
+          division.key.toLowerCase() === lowerArg || division.displayName.toLowerCase() === lowerArg
+      );
+      if (!matched) {
+        await interaction.editReply({ content: `Division not found: ${divisionArg}. Use a valid division key or display name from division.lua.` });
+        return;
+      }
+      targetDivisions = [matched];
+    }
+
     const guild = await discordClient.guilds.fetch(DISCORD_GUILD_ID);
     await guild.roles.fetch();
 
@@ -634,7 +655,7 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     const createRankRoles = scope === 'rank' || scope === 'all';
 
     const divisionRoles = createDivisionRoles
-      ? divisions.map((division) => ({
+      ? targetDivisions.map((division) => ({
           name: buildDivisionRoleName(division),
           color: discordColorFromName(division.visualColor),
           type: 'division' as const,
@@ -642,7 +663,7 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       : [];
 
     const rankRoles = createRankRoles
-      ? divisions.flatMap((division) =>
+      ? targetDivisions.flatMap((division) =>
           division.ranks.map((rank) => ({
             name: buildRoleName(division, rank),
             color: discordColorFromName(division.visualColor),
@@ -717,20 +738,20 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     await guild.roles.fetch();
 
     const scope = interaction.options.getString('scope') ?? 'all';
-    const rows = ['role_name,role_id'];
+    const rows = ['discord_role_id,roblox_team_name'];
 
     for (const division of divisions) {
       if (scope === 'division' || scope === 'all') {
         const roleName = buildDivisionRoleName(division);
         const roleId = guild.roles.cache.find((role) => role.name === roleName)?.id ?? '';
-        rows.push([csvEscape(roleName), csvEscape(roleId)].join(','));
+        rows.push([csvEscape(roleId), csvEscape(division.displayName)].join(','));
       }
 
       if (scope === 'rank' || scope === 'all') {
         for (const rank of division.ranks) {
           const roleName = buildRoleName(division, rank);
           const roleId = guild.roles.cache.find((role) => role.name === roleName)?.id ?? '';
-          rows.push([csvEscape(roleName), csvEscape(roleId)].join(','));
+          rows.push([csvEscape(roleId), csvEscape(division.displayName)].join(','));
         }
       }
     }
@@ -738,7 +759,7 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
     const csvBuffer = Buffer.from(rows.join('\r\n'), 'utf8');
     const attachment = new AttachmentBuilder(csvBuffer).setName('division_roles.csv');
 
-    await interaction.editReply({ content: 'Role list generated with role names and Discord role IDs.', files: [attachment] });
+    await interaction.editReply({ content: 'Role mapping list generated for Supabase import with discord_role_id and roblox_team_name.', files: [attachment] });
     return;
   }
 

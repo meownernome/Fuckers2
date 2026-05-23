@@ -317,6 +317,19 @@ function generateVerificationCode() {
     }
     return code;
 }
+async function unlinkRobloxVerification(robloxId, keepDiscordId) {
+    if (!robloxId) {
+        return;
+    }
+    let query = supabase.from('verified_users').delete().eq('roblox_id', robloxId);
+    if (keepDiscordId) {
+        query = supabase.from('verified_users').delete().eq('roblox_id', robloxId).neq('discord_id', keepDiscordId);
+    }
+    const { error } = await query;
+    if (error) {
+        console.error('Supabase unlink roblox verification error:', error);
+    }
+}
 function requireJwtSecret(secretToken) {
     return typeof secretToken === 'string' && secretToken === JWT_SECRET;
 }
@@ -590,6 +603,12 @@ discordClient.once(discord_js_1.Events.ClientReady, async () => {
                         { name: 'rank', value: 'rank' },
                     ],
                 },
+                {
+                    name: 'guild-id',
+                    description: 'Optional guild ID to target when running outside the server',
+                    type: 3,
+                    required: false,
+                },
             ],
         },
         {
@@ -636,16 +655,37 @@ discordClient.once(discord_js_1.Events.ClientReady, async () => {
         },
     ];
     try {
-        if (discordClient.application?.commands) {
-            await discordClient.application.commands.set(commandDefinition);
+        if (!discordClient.application?.commands) {
+            console.warn('[BOT] Global application commands are unavailable.');
+            return;
+        }
+        const commandData = commandDefinition;
+        const knownGuilds = loadGuildConfigs();
+        const guildIds = new Set();
+        if (DISCORD_GUILD_ID)
+            guildIds.add(DISCORD_GUILD_ID);
+        for (const guildConfig of knownGuilds) {
+            if (guildConfig.id)
+                guildIds.add(guildConfig.id);
+        }
+        if (guildIds.size === 0) {
+            await discordClient.application.commands.set(commandData);
             console.log('[BOT] Registered global slash commands for verification and admin moderation');
         }
         else {
-            console.warn('[BOT] Global application commands are unavailable.');
+            for (const guildId of guildIds) {
+                try {
+                    await discordClient.application.commands.set(commandData, guildId);
+                    console.log(`[BOT] Registered slash commands in guild ${guildId}`);
+                }
+                catch (guildError) {
+                    console.warn(`[BOT] Command registration failed for guild ${guildId}:`, guildError);
+                }
+            }
         }
     }
     catch (globalError) {
-        console.error('[BOT] Global command registration failed:', globalError);
+        console.error('[BOT] Slash command registration failed:', globalError);
     }
 });
 const pendingVerifications = new Map();
@@ -1182,6 +1222,7 @@ Division role created: ${divisionRole.name}`;
                 await interaction.editReply({ content: 'This verification code has expired.' });
                 return;
             }
+            await unlinkRobloxVerification(entry.roblox_id, interaction.user.id);
             const { error: upsertError } = await supabase.from('verified_users').upsert({
                 discord_id: interaction.user.id,
                 roblox_id: entry.roblox_id,
@@ -1360,6 +1401,7 @@ discordClient.on(discord_js_1.Events.MessageCreate, async (message) => {
             }
             const robloxId = entry.roblox_id;
             const robloxUsername = entry.roblox_username;
+            await unlinkRobloxVerification(robloxId, message.author.id);
             const { error: upsertError } = await supabase.from('verified_users').upsert({
                 discord_id: message.author.id,
                 roblox_id: robloxId,

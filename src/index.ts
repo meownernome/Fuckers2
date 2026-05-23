@@ -348,11 +348,64 @@ async function fetchGuildMember(interaction: any, guild: any) {
 
 async function resolveDefaultGuild() {
   const configs = loadGuildConfigs();
-  if (configs.length === 1) {
-    return await discordClient.guilds.fetch(configs[0].id);
+  const guildCandidates = new Set<string>();
+
+  if (DISCORD_GUILD_ID) {
+    guildCandidates.add(DISCORD_GUILD_ID);
+  }
+  for (const config of configs) {
+    if (config.id) {
+      guildCandidates.add(config.id);
+    }
+  }
+  for (const guild of discordClient.guilds.cache.values()) {
+    guildCandidates.add(guild.id);
   }
 
-  return await discordClient.guilds.fetch(DISCORD_GUILD_ID);
+  for (const guildId of guildCandidates) {
+    try {
+      return await discordClient.guilds.fetch(guildId);
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error('Unable to resolve any guild context. Add a guild entry or ensure the bot is in a tracked server.');
+}
+
+function getTrackedGuildIds(): string[] {
+  const guildIds = new Set<string>();
+  if (DISCORD_GUILD_ID) {
+    guildIds.add(DISCORD_GUILD_ID);
+  }
+  for (const config of loadGuildConfigs()) {
+    if (config.id) {
+      guildIds.add(config.id);
+    }
+  }
+  for (const guild of discordClient.guilds.cache.values()) {
+    guildIds.add(guild.id);
+  }
+  return Array.from(guildIds);
+}
+
+async function updateNicknameAcrossTrackedGuilds(discordId: string, nickname: string | null) {
+  const guildIds = getTrackedGuildIds();
+  const results: { guildId: string; status: 'updated' | 'failed'; error?: string }[] = [];
+
+  for (const guildId of guildIds) {
+    try {
+      const guild = await discordClient.guilds.fetch(guildId);
+      const member = await guild.members.fetch(discordId);
+      await member.setNickname(nickname);
+      results.push({ guildId, status: 'updated' });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      results.push({ guildId, status: 'failed', error: errorMessage });
+    }
+  }
+
+  return results;
 }
 
 async function findDiscordRoleIdsAcrossGuilds(discordId: string) {
@@ -513,10 +566,14 @@ app.post('/api/game/check-roles', async (req: Request, res: Response) => {
 
     console.log('[API] role mappings loaded:', roleMappings);
 
-    const teamNames = (roleMappings || [])
-      .filter((mapping: RoleMapping) => roleIds.includes(mapping.discord_role_id))
-      .map((mapping: RoleMapping) => mapping.roblox_team_name)
-      .filter((name: unknown): name is string => typeof name === 'string');
+    const teamNames = Array.from(
+      new Set(
+        (roleMappings || [])
+          .filter((mapping: RoleMapping) => roleIds.includes(mapping.discord_role_id))
+          .map((mapping: RoleMapping) => mapping.roblox_team_name)
+          .filter((name: unknown): name is string => typeof name === 'string')
+      )
+    );
 
     console.log('[API] matched team names:', teamNames);
     return res.json({ teamNames });
@@ -833,14 +890,12 @@ discordClient.on(Events.InteractionCreate, async (interaction) => {
       }
 
       try {
-        const guild = await resolveGuild(interaction);
-        const member = await guild.members.fetch(interaction.user.id);
-        await member.setNickname(null);
+        await updateNicknameAcrossTrackedGuilds(interaction.user.id, null);
       } catch (nicknameError) {
         console.warn('Could not reset nickname during logout:', nicknameError);
       }
 
-      await interaction.editReply({ content: 'You have been logged out from Roblox verification and your server nickname was reset.' });
+      await interaction.editReply({ content: 'You have been logged out from Roblox verification and your server nicknames were reset across tracked servers.' });
     } catch (err) {
       console.error('Logout command error:', err);
       await interaction.editReply({ content: 'An error occurred while logging you out.' });
@@ -1468,11 +1523,14 @@ Division role created: ${divisionRole.name}`;
 
       let nicknameMessage = 'Your Discord server nickname has been updated.';
       try {
-        const guild = await resolveDefaultGuild();
-        const member = await guild.members.fetch(interaction.user.id);
-        await member.setNickname(entry.roblox_username);
+        const results = await updateNicknameAcrossTrackedGuilds(interaction.user.id, entry.roblox_username);
+        const failed = results.filter((result) => result.status === 'failed');
+        if (failed.length > 0) {
+          nicknameMessage = `Nickname update failed in ${failed.length} server(s).`;
+          console.warn('Nickname update failures:', failed);
+        }
       } catch (nicknameError) {
-        console.warn('Could not update nickname:', nicknameError);
+        console.warn('Could not update nickname across tracked guilds:', nicknameError);
         const errMsg = nicknameError instanceof Error ? nicknameError.message : String(nicknameError);
         nicknameMessage = `Nickname update failed: ${errMsg}`;
       }
@@ -1537,9 +1595,7 @@ discordClient.on(Events.MessageCreate, async (message) => {
       }
 
       try {
-        const guild = await resolveDefaultGuild();
-        const member = await guild.members.fetch(message.author.id);
-        await member.setNickname(null);
+        await updateNicknameAcrossTrackedGuilds(message.author.id, null);
       } catch (nicknameError) {
         console.warn('Could not reset nickname during DM logout:', nicknameError);
       }
@@ -1668,11 +1724,14 @@ discordClient.on(Events.MessageCreate, async (message) => {
 
       let nicknameMessage = 'Your Discord server nickname has been updated.';
       try {
-        const guild = await resolveDefaultGuild();
-        const member = await guild.members.fetch(message.author.id);
-        await member.setNickname(robloxUsername);
+        const results = await updateNicknameAcrossTrackedGuilds(message.author.id, robloxUsername);
+        const failed = results.filter((result) => result.status === 'failed');
+        if (failed.length > 0) {
+          nicknameMessage = `Nickname update failed in ${failed.length} server(s).`;
+          console.warn('Nickname update failures:', failed);
+        }
       } catch (nicknameError) {
-        console.warn('Could not update nickname:', nicknameError);
+        console.warn('Could not update nickname across tracked guilds:', nicknameError);
         const errMsg = nicknameError instanceof Error ? nicknameError.message : String(nicknameError);
         nicknameMessage = `Nickname update failed: ${errMsg}`;
       }

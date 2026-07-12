@@ -1,8 +1,8 @@
-import { MessageFlags,  SlashCommandBuilder, ChatInputCommandInteraction, PermissionsBitField } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 
 export class VerificationCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
 
     const minecraftUsername = await this.getMinecraftUsernameFromUser(interaction.user.id);
     if (!minecraftUsername) {

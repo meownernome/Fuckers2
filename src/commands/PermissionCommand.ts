@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ChannelType, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder, ChatInputCommandInteraction, ChannelType, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/Logger';
 
 const CATEGORIES = ['information', 'community', 'support', 'tier-testing', 'tickets', 'leaderboards', 'staff', 'logs', 'voice'];
@@ -17,7 +17,7 @@ const CATEGORY_PERMS: Record<string, { everyone: boolean; note: string }> = {
 
 export class PermissionCommand {
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: false });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
 
     const guild = interaction.guild!;
     let updated = 0;

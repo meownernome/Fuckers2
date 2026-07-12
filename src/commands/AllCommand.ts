@@ -1,9 +1,9 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { ServerSetup } from '../ServerSetup';
 
 export class AllCommand {
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
     try {
       await new ServerSetup(interaction.client, interaction.guild!).setupAll();
       await interaction.editReply({ content: '✅ /all complete. Run `/setup` next.' });

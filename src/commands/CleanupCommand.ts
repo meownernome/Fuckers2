@@ -1,14 +1,14 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder } from 'discord.js';
 import { ServerSetup } from '../ServerSetup';
 
 export class CleanupCommand {
   public async execute(interaction: any): Promise<void> {
     if (interaction.user.id !== interaction.guild?.ownerId) {
-      await interaction.reply({ content: '❌ Only the server owner can use this command.', ephemeral: true });
+      await interaction.reply({ content: '❌ Only the server owner can use this command.', flags: MessageFlags.Ephemeral });
       return;
     }
 
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
 
     const serverSetup = new ServerSetup(interaction.client, interaction.guild);
     const result = await serverSetup.cleanup();

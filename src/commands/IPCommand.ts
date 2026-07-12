@@ -1,4 +1,4 @@
-import { MessageFlags,  SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
 
 export class IPCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -14,7 +14,7 @@ export class IPCommand {
       .setFooter({ text: 'Join us for PvP tier testing!' })
       .setTimestamp();
 
-    await interaction.reply({ content: embed.toString(), ephemeral: true });
+    await interaction.reply({ content: embed.toString(), flags: MessageFlags.Ephemeral });
   }
 
   public get command() {

@@ -4,7 +4,7 @@ export class PingCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const latency = Date.now() - interaction.createdTimestamp;
 
-    await interaction.reply({ content: `🏓 Pong! Latency: ${latency}ms`, ephemeral: true });
+    await interaction.reply({ content: `🏓 Pong! Latency: ${latency}ms`, flags: MessageFlags.Ephemeral });
   }
 
   public get command() {

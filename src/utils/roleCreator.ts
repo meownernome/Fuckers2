@@ -31,7 +31,15 @@ export async function createRole(guild: Guild, name: string, color: number): Pro
       }
 
       const text = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status}${text ? `: ${text}` : ''}`);
+      let message = `HTTP ${res.status}`;
+      if (res.status === 403) {
+        message = 'Missing Manage Roles permission or the bot role is too low.';
+      } else if (res.status === 400) {
+        message = 'The role could not be created. The server may already be at its role limit.';
+      } else if (text) {
+        message = text;
+      }
+      throw new Error(message);
     } catch (e: any) {
       clearTimeout(timer);
       if (e?.name === 'AbortError') {

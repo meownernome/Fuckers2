@@ -1,9 +1,9 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { MessageFlags, SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { ServerSetup } from '../ServerSetup';
 
 export class SetupCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
 
     const serverSetup = new ServerSetup(interaction.client, interaction.guild!);
     await serverSetup.setupContent();

@@ -28,7 +28,7 @@ export class ProfileCommand {
     profileContent += `\n**Tests Completed:** ${tierHistory.length}\n`;
     profileContent += `**Member Since:** ${new Date(interaction.user.createdTimestamp).toLocaleDateString()}\n`;
 
-    await interaction.reply({ content: profileContent, ephemeral: true });
+    await interaction.reply({ content: profileContent, flags: MessageFlags.Ephemeral });
   }
 
   private async getMinecraftUsernameFromUser(discordUserId: string): Promise<string | null> {

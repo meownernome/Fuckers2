@@ -3,7 +3,7 @@ import { MessageFlags, TextChannel, SlashCommandBuilder, ChatInputCommandInterac
 export class ChannelsCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const cache = interaction.guild?.channels.cache;
-    if (!cache) { await interaction.reply({ content: 'No guild found.', ephemeral: true }); return; }
+    if (!cache) { await interaction.reply({ content: 'No guild found.', flags: MessageFlags.Ephemeral }); return; }
     const channels = cache
       .filter(channel => channel.type !== ChannelType.GuildCategory)
       .sort((a, b) => {
@@ -22,7 +22,7 @@ export class ChannelsCommand {
       channelsList += `• ${channel.name} (${channel.type})\n`;
     }
 
-    await interaction.reply({ content: channelsList, ephemeral: true });
+    await interaction.reply({ content: channelsList, flags: MessageFlags.Ephemeral });
   }
 
   public get command() {

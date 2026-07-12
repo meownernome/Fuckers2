@@ -53,12 +53,10 @@ export class MakeRolesCommand {
       try {
         await createRole(guild, role.name, role.color);
         created++;
+        existingNames.add(role.name);
       } catch (e: any) {
         failed++;
         failedNames.push(`${role.name}: ${e?.message || 'Unknown error'}`);
-        if (e?.message?.includes('limit') || e?.message?.includes('403') || e?.message?.includes('permission') || e?.message?.includes('Missing')) {
-          break;
-        }
       }
 
       if ((i + 1) % 10 === 0 || i === rolesToCreate.length - 1) {

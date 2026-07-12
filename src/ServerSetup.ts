@@ -1,5 +1,5 @@
-import https from 'https';
 import { Guild, ChannelType, TextChannel, CategoryChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
+import { REST } from '@discordjs/rest';
 import { logger } from './utils/Logger';
 import { ALL_ROLES } from './roles';
 
@@ -112,56 +112,30 @@ export class ServerSetup {
       } catch (e: any) { logger.error(`  #${ch.name} FAIL: ${e.message}`); }
     }
 
-    // Roles — create from explicit flat list via direct HTTPS
+    // Roles — create from explicit flat list via discord.js REST (built-in 429 handling)
     const start = Date.now();
     let done = 0;
     let failedRoles = 0;
     try { await this.guild.roles.fetch(); } catch {}
     const existingNames = new Set(this.guild.roles.cache.map(r => r.name));
-    const token = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
+    const token = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN || '';
+    const rest = new REST({ version: '10' }).setToken(token as string);
 
     for (let i = 0; i < ALL_ROLES.length; i++) {
       if (Date.now() - start > 600000) { logger.warn('⏰ Timeout'); break; }
       const r = ALL_ROLES[i];
       if (existingNames.has(r.name)) { done++; continue; }
       try {
-        await new Promise<void>((resolve, reject) => {
-          const maxAttempts = 5;
-          let attempt = 0;
-          const doRequest = () => {
-            attempt++;
-            const data = JSON.stringify({ name: r.name, color: r.color, hoist: false, mentionable: false });
-            const req = https.request({
-              hostname: 'discord.com', path: `/api/v10/guilds/${this.guild.id}/roles`,
-              method: 'POST', timeout: 8000,
-              headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
-            }, (res) => {
-              let body = '';
-              res.on('data', (c: any) => body += c);
-              res.on('end', () => {
-                if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) resolve();
-                else if (res.statusCode === 429 && attempt < maxAttempts) {
-                  try {
-                    const json = JSON.parse(body);
-                    setTimeout(doRequest, (json.retry_after || 5) * 1000 + 1000);
-                  } catch { setTimeout(doRequest, 6000); }
-                } else reject(new Error(`HTTP ${res.statusCode}`));
-              });
-            });
-            req.on('error', () => attempt < maxAttempts ? setTimeout(doRequest, 5000) : reject(new Error('Request failed')));
-            req.on('timeout', () => { req.destroy(); attempt < maxAttempts ? setTimeout(doRequest, 5000) : reject(new Error('TIMEOUT')); });
-            req.write(data);
-            req.end();
-          };
-          doRequest();
+        await rest.post(`/guilds/${this.guild.id}/roles`, {
+          body: { name: r.name, color: r.color, hoist: false, mentionable: false },
         });
         done++;
         if (done % 50 === 0 || done === ALL_ROLES.length) logger.info(`  [${done}/${ALL_ROLES.length}] roles created`);
-        await this.sleep(1000);
+        await this.sleep(2000);
       } catch (e: any) {
         failedRoles++;
         logger.error(`  FAIL ${r.name}: ${e.message}`);
-        await this.sleep(1500);
+        await this.sleep(3000);
       }
     }
 

@@ -1,6 +1,8 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
-import { REST } from '@discordjs/rest';
 import { ALL_ROLES } from '../roles';
+import { createRole } from '../utils/roleCreator';
+
+function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 export class MakeRolesCommand {
   async execute(interaction: ChatInputCommandInteraction) {
@@ -9,7 +11,6 @@ export class MakeRolesCommand {
     const guild = interaction.guild!;
     const token = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
     if (!token) { await interaction.editReply({ content: '❌ No bot token.' }); return; }
-    const rest = new REST({ version: '10' }).setToken(token as string);
 
     await interaction.editReply({ content: '🔍 Fetching existing roles...' });
     try { await guild.roles.fetch(); } catch {}
@@ -27,12 +28,11 @@ export class MakeRolesCommand {
       if (existingNames.has(r.name)) { skipped++; continue; }
 
       try {
-        await rest.post(`/guilds/${guild.id}/roles`, {
-          body: { name: r.name, color: r.color, hoist: false, mentionable: false },
-        });
+        await createRole(token, guild.id, r.name, r.color);
         created++;
-      } catch {
-        failed++; failedNames.push(r.name);
+      } catch (e: any) {
+        failed++;
+        failedNames.push(r.name);
       }
 
       if ((i + 1) % 50 === 0 || i === total - 1) {
@@ -43,13 +43,13 @@ export class MakeRolesCommand {
         }).catch(() => {});
       }
 
-      await new Promise(r => setTimeout(r, 2000));
+      await sleep(2000);
     }
 
     const sec = ((Date.now() - start) / 1000).toFixed(0);
     let desc = `\`\`\`\n  Total    ━━  ${total}\n  Created  ━━  ${created}\n  Skipped  ━━  ${skipped}\n  Failed   ━━  ${failed}\n  Time     ━━  ${sec}s\n\`\`\``;
     if (failedNames.length > 0) {
-      desc += `\n**Failed:** ${failedNames.slice(0, 10).join(', ')}${failedNames.length > 10 ? ` +${failedNames.length - 10} more` : ''}`;
+      desc += `\n**Failed:** ${failedNames.slice(0, 10).map(n => `• ${n}`).join('\n')}`;
     }
 
     const embed = new EmbedBuilder()

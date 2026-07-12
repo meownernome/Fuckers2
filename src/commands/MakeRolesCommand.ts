@@ -28,9 +28,7 @@ export class MakeRolesCommand {
 
     const existingNames = new Set(guild.roles.cache.map(r => r.name));
     const missingRoles = ALL_ROLES.filter(r => !existingNames.has(r.name));
-    const roleLimit = 250;
-    const availableSlots = Math.max(0, roleLimit - guild.roles.cache.size);
-    const rolesToCreate = missingRoles.slice(0, availableSlots);
+    const rolesToCreate = missingRoles;
     const skipped = ALL_ROLES.length - rolesToCreate.length;
 
     if (rolesToCreate.length === 0) {
@@ -57,8 +55,8 @@ export class MakeRolesCommand {
         created++;
       } catch (e: any) {
         failed++;
-        failedNames.push(role.name);
-        if (e?.message?.includes('limit') || e?.message?.includes('403') || e?.message?.includes('Missing')) {
+        failedNames.push(`${role.name}: ${e?.message || 'Unknown error'}`);
+        if (e?.message?.includes('limit') || e?.message?.includes('403') || e?.message?.includes('permission') || e?.message?.includes('Missing')) {
           break;
         }
       }

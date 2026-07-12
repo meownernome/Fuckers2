@@ -169,6 +169,8 @@ export class ServerSetup {
     const verify = this.tc('verify');
     const staff = this.tc('staff');
     const roles = this.tc('roles');
+    const rtt = this.tc('request-tier-test');
+    const queue = this.tc('queue');
 
     // ── Welcome ──
     if (welcome) {
@@ -209,21 +211,41 @@ export class ServerSetup {
       await verify.send({ embeds: [e] as any, components: [row as any] }).catch(() => {});
     }
 
-    // ── Roles (tier test request + apps) ──
+    // ── Request Tier Test panel ──
+    if (rtt) {
+      const e = new EmbedBuilder()
+        .setTitle('╔══════════════════════════════╗')
+        .setDescription('## ⚔️ ━━ REQUEST TIER TEST\n╚══════════════════════════════╝\n\nClick the button below to request a tier test.\nA ticket will be created where a tester will assess your skills.\n\n**Available Modes:** Sword, Crystal, UHC, Boxing, Gapple, NoDebuff, Combo, Axe, Bedwars, Skywars, Bridge, and more.\n\n**Tiers:** LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5')
+        .setColor(0xE67E22).setFooter({ text: '╠════ TIER TEST ════╣' }).setTimestamp();
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId('request_tier_test').setLabel('⚔️ Request Tier Test').setStyle(ButtonStyle.Primary),
+      );
+      await rtt.send({ embeds: [e] as any, components: [row as any] }).catch(() => {});
+    }
+
+    // ── Queue panel ──
+    if (queue) {
+      const e = new EmbedBuilder()
+        .setTitle('╔══════════════════════════════╗')
+        .setDescription('## ⏳ ━━ TIER TEST QUEUE\n╚══════════════════════════════╝\n\nActive tier test tickets will appear here.\n\n⚔️ **Current Queue:**\n> No active tests in queue.\n\nWhen a ticket is claimed, it will be removed from this queue.')
+        .setColor(0xF1C40F).setFooter({ text: '╠════ QUEUE ════╣ ┃ Updates automatically' }).setTimestamp();
+      await queue.send({ embeds: [e] as any }).catch(() => {});
+    }
+
+    // ── Roles & Applications ──
     if (roles) {
       const e = new EmbedBuilder()
         .setTitle('╔══════════════════════════════╗')
-        .setDescription('## 🎨 ━━ ROLES & APPLICATIONS\n╚══════════════════════════════╝\n\n**⚔️ Request a Tier Test** — Get ranked in any PvP mode.\n**📝 Staff Application** — Join the staff team.\n**⚔️ Tier Tester Application** — Become a certified tier tester.')
-        .setColor(0x9B59B6).setFooter({ text: '╠════ ROLES ════╣' }).setTimestamp();
+        .setDescription('## 🎨 ━━ APPLICATIONS\n╚══════════════════════════════╝\n\n**📝 Staff Application** — Join the staff team.\n**⚔️ Tier Tester Application** — Become a certified tier tester.')
+        .setColor(0x9B59B6).setFooter({ text: '╠════ APPLICATIONS ════╣' }).setTimestamp();
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('request_tier_test').setLabel('⚔️ Request Tier Test').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId('staff_apply').setLabel('📝 Staff Apply').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('tester_apply').setLabel('⚔️ Tester Apply').setStyle(ButtonStyle.Secondary),
       );
       await roles.send({ embeds: [e] as any, components: [row as any] }).catch(() => {});
     }
 
-    // ── Staff (support ticket) ──
+    // ── Support Ticket ──
     if (staff) {
       const e = new EmbedBuilder()
         .setTitle('╔══════════════════════════════╗')

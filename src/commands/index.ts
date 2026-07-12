@@ -4,6 +4,8 @@ import { CleanupCommand } from './CleanupCommand';
 import { FAQCommand } from './FAQCommand';
 import { IPCommand } from './IPCommand';
 import { LeaderboardCommand } from './LeaderboardCommand';
+import { MakeRolesCommand } from './MakeRolesCommand';
+import { PermissionCommand } from './PermissionCommand';
 import { PingCommand } from './PingCommand';
 import { ProfileCommand } from './ProfileCommand';
 import { RolesCommand } from './RolesCommand';
@@ -23,6 +25,8 @@ const commandList: Command[] = [
   new FAQCommand(),
   new IPCommand(),
   new LeaderboardCommand(),
+  new MakeRolesCommand(),
+  new PermissionCommand(),
   new PingCommand(),
   new ProfileCommand(),
   new RolesCommand(),
@@ -41,6 +45,8 @@ export { CleanupCommand } from './CleanupCommand';
 export { FAQCommand } from './FAQCommand';
 export { IPCommand } from './IPCommand';
 export { LeaderboardCommand } from './LeaderboardCommand';
+export { MakeRolesCommand } from './MakeRolesCommand';
+export { PermissionCommand } from './PermissionCommand';
 export { PingCommand } from './PingCommand';
 export { ProfileCommand } from './ProfileCommand';
 export { RolesCommand } from './RolesCommand';

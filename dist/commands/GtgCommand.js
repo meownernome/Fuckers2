@@ -1,7 +1,42 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GtgCommand = void 0;
 const discord_js_1 = require("discord.js");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const roles_1 = require("../roles");
 const roleCreator_1 = require("../utils/roleCreator");
 const gtgState = new Map();
@@ -97,72 +132,59 @@ class GtgCommand {
             await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        const modal = new discord_js_1.ModalBuilder()
-            .setCustomId('gtg_add_modal')
-            .setTitle('Bulk Add Roles');
-        const sample = roles_1.ALL_ROLES.slice(0, 1).map(r => `${r.name}, #${r.color.toString(16).padStart(6, '0')}`).join(', ');
-        const placeholder = `e.g. ${sample} (max 4000 chars total)`;
-        modal.addComponents(new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.TextInputBuilder()
-            .setCustomId('roles_data')
-            .setLabel('RoleName, #HexColor (one per line)')
-            .setStyle(discord_js_1.TextInputStyle.Paragraph)
-            .setRequired(true)
-            .setPlaceholder(placeholder)));
-        try {
-            await interaction.showModal(modal);
-        }
-        catch (e) {
-            await interaction.reply({ content: `❌ Could not open modal: ${e.message}`, flags: discord_js_1.MessageFlags.Ephemeral });
-        }
-    }
-    static async processBulkAdd(interaction, data) {
-        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
-        const lines = data.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
-        if (lines.length === 0) {
-            await interaction.editReply({ content: '❌ No valid role data found.' });
+        const filePath = path.join(process.cwd(), 'all_roles_list.txt');
+        if (!fs.existsSync(filePath)) {
+            await interaction.reply({ content: `❌ File \`all_roles_list.txt\` not found. Upload it to the bot directory.`, flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
+        const data = fs.readFileSync(filePath, 'utf8');
+        const lines = data.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
+        if (lines.length === 0) {
+            await interaction.reply({ content: '❌ No valid role data in file.', flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        await interaction.reply({ content: `📄 Found **${lines.length}** roles in file. Starting creation...`, flags: discord_js_1.MessageFlags.Ephemeral });
         const guild = interaction.guild;
         await guild.roles.fetch();
         const existingNames = new Set(guild.roles.cache.map((r) => r.name));
-        const roles = [];
+        const toCreate = [];
         const errors = [];
         for (const line of lines) {
             const parts = line.split(',').map(s => s.trim());
             if (parts.length < 1 || !parts[0]) {
-                errors.push(`Invalid line: ${line}`);
+                errors.push(`Invalid: ${line}`);
                 continue;
             }
             const name = parts[0];
             const color = parts[1] ? parseHexColor(parts[1]) : 0x99AAB5;
             if (existingNames.has(name)) {
-                errors.push(`Already exists: ${name}`);
+                errors.push(`Exists: ${name}`);
                 continue;
             }
-            roles.push({ name, color });
+            toCreate.push({ name, color });
         }
-        if (roles.length === 0) {
+        if (toCreate.length === 0) {
             await interaction.editReply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}` });
             return;
         }
         let created = 0;
         const failed = [];
-        for (let i = 0; i < roles.length; i++) {
+        for (let i = 0; i < toCreate.length; i++) {
             try {
-                await (0, roleCreator_1.createRole)(guild, roles[i].name, roles[i].color);
+                await (0, roleCreator_1.createRole)(guild, toCreate[i].name, toCreate[i].color);
                 created++;
-                if ((i + 1) % 5 === 0 || i === roles.length - 1) {
-                    await interaction.editReply({ content: `⚙️ Creating roles... ${i + 1}/${roles.length} (${created} done)` });
+                if ((i + 1) % 5 === 0 || i === toCreate.length - 1) {
+                    await interaction.editReply({ content: `⚙️ Creating... ${i + 1}/${toCreate.length} (${created} done)` });
                 }
                 await new Promise(r => setTimeout(r, 2000));
             }
             catch (e) {
-                failed.push(roles[i].name);
+                failed.push(toCreate[i].name);
             }
         }
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle('✅ Bulk Role Creation')
-            .setDescription(`**Created:** ${created}/${roles.length}\n` +
+            .setDescription(`**Created:** ${created}/${toCreate.length}\n` +
             (failed.length > 0 ? `**Failed:** ${failed.length}\n${failed.slice(0, 5).map(n => `• ${n}`).join('\n')}` : '') +
             (errors.length > 0 ? `\n**Skipped:** ${errors.length} invalid lines` : ''))
             .setColor(failed.length > 0 ? 0xF1C40F : 0x2ECC71)
@@ -252,12 +274,6 @@ class GtgCommand {
         state.idx++;
         await this.handleButton(interaction);
     }
-    static async handleModal(interaction) {
-        if (interaction.customId !== 'gtg_add_modal')
-            return;
-        const data = interaction.fields.getTextInputValue('roles_data');
-        await GtgCommand.processBulkAdd(interaction, data);
-    }
     get command() {
         return new discord_js_1.SlashCommandBuilder()
             .setName('gtg')
@@ -269,7 +285,7 @@ class GtgCommand {
             .addStringOption(opt => opt.setName('color').setDescription('Hex color (e.g. #FF0000)').setRequired(false)))
             .addSubcommand(sub => sub
             .setName('list')
-            .setDescription('Bulk add roles by pasting a formatted list'))
+            .setDescription('Read all_roles_list.txt and bulk create roles from it'))
             .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.ManageRoles)
             .setDMPermission(false);
     }

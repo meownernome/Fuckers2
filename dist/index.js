@@ -399,10 +399,6 @@ async function handleModal(interaction) {
         }
         return;
     }
-    if (id === 'gtg_add_modal') {
-        await GtgCommand_1.GtgCommand.handleModal(interaction);
-        return;
-    }
     if (id === 'staff_application') {
         const age = interaction.fields.getTextInputValue('age');
         const exp = interaction.fields.getTextInputValue('experience');

@@ -1,17 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.STAFF_EMOJI_PREFIX = exports.ALL_ROLES = void 0;
+exports.STAFF_EMOJI_PREFIX = exports.ALL_ROLES = exports.TIERS = exports.MODES = void 0;
 exports.getTierRoleName = getTierRoleName;
 const textStyles_1 = require("./utils/textStyles");
-const MODES = [
+exports.MODES = [
     'Sword', 'Crystal', 'SMP', 'Netherite Pot', 'Diamond Pot',
     'UHC', 'BuildUHC', 'NoDebuff', 'Combo', 'Gapple',
-    'OP Duel', 'Boxing', 'Axe', 'Mace', 'Anchor',
-    'Cart PvP', 'Bedwars', 'Skywars', 'Bridge', 'Nodebuff',
-    'Vanilla', 'Crossbow', 'Trident', 'Shield', 'Elytra Combat',
-    'Custom Duel',
+    'OP Duel', 'Boxing', 'Axe', 'Bedwars', 'Skywars',
+    'Bridge', 'Nodebuff', 'Vanilla', 'Shield', 'Custom Duel',
 ];
-const TIERS = [
+exports.TIERS = [
     { name: 'LT 1', color: 0x7F8C8D },
     { name: 'HT 1', color: 0x95A5A6 },
     { name: 'LT 2', color: 0x27AE60 },
@@ -20,6 +18,8 @@ const TIERS = [
     { name: 'HT 3', color: 0x3498DB },
     { name: 'LT 4', color: 0x8E44AD },
     { name: 'HT 4', color: 0x9B59B6 },
+    { name: 'LT 5', color: 0xE74C3C },
+    { name: 'HT 5', color: 0xC0392B },
 ];
 const STAFF_DEFS = [
     { emoji: '👑', name: 'Founder' },
@@ -45,7 +45,7 @@ const STAFF_DEFS = [
     { emoji: '🤖', name: 'Bot' },
 ];
 exports.ALL_ROLES = [
-    ...MODES.flatMap(mode => TIERS.map(tier => ({
+    ...exports.MODES.flatMap(mode => exports.TIERS.map(tier => ({
         name: (0, textStyles_1.formatRoleName)(`${mode} ${tier.name}`),
         color: tier.color,
     }))),

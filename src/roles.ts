@@ -1,15 +1,13 @@
 import { formatRoleName, formatStaffRoleName } from './utils/textStyles';
 
-const MODES = [
+export const MODES = [
   'Sword', 'Crystal', 'SMP', 'Netherite Pot', 'Diamond Pot',
   'UHC', 'BuildUHC', 'NoDebuff', 'Combo', 'Gapple',
-  'OP Duel', 'Boxing', 'Axe', 'Mace', 'Anchor',
-  'Cart PvP', 'Bedwars', 'Skywars', 'Bridge', 'Nodebuff',
-  'Vanilla', 'Crossbow', 'Trident', 'Shield', 'Elytra Combat',
-  'Custom Duel',
+  'OP Duel', 'Boxing', 'Axe', 'Bedwars', 'Skywars',
+  'Bridge', 'Nodebuff', 'Vanilla', 'Shield', 'Custom Duel',
 ];
 
-const TIERS: { name: string; color: number }[] = [
+export const TIERS: { name: string; color: number }[] = [
   { name: 'LT 1', color: 0x7F8C8D },
   { name: 'HT 1', color: 0x95A5A6 },
   { name: 'LT 2', color: 0x27AE60 },
@@ -18,6 +16,8 @@ const TIERS: { name: string; color: number }[] = [
   { name: 'HT 3', color: 0x3498DB },
   { name: 'LT 4', color: 0x8E44AD },
   { name: 'HT 4', color: 0x9B59B6 },
+  { name: 'LT 5', color: 0xE74C3C },
+  { name: 'HT 5', color: 0xC0392B },
 ];
 
 interface StaffRoleDef { emoji: string; name: string }

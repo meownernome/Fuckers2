@@ -1,7 +1,8 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActionRowBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ALL_ROLES, STAFF_EMOJI_PREFIX } from '../roles';
+import { ALL_ROLES, STAFF_EMOJI_PREFIX, MODES, TIERS } from '../roles';
+import { formatRoleName } from '../utils/textStyles';
 import { createRole } from '../utils/roleCreator';
 
 const gtgState = new Map<string, { guildId: string; idx: number }>();
@@ -35,6 +36,8 @@ export class GtgCommand {
       await this.handleAdd(interaction);
     } else if (sub === 'list') {
       await this.handleList(interaction);
+    } else if (sub === 'mode') {
+      await this.handleMode(interaction);
     } else {
       await this.handleGtg(interaction);
     }
@@ -178,6 +181,59 @@ export class GtgCommand {
     await interaction.editReply({ content: null, embeds: [embed] as any });
   }
 
+  private async handleMode(interaction: ChatInputCommandInteraction) {
+    if (!isStaff(interaction.member)) {
+      await interaction.reply({ content: '❌ Staff only.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    const mode = interaction.options.getString('mode', true);
+    if (!MODES.includes(mode)) {
+      await interaction.reply({ content: `❌ Invalid mode. Available: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const guild = interaction.guild!;
+    await guild.roles.fetch();
+    const existing = new Set(guild.roles.cache.map((r: any) => r.name));
+
+    const toCreate = TIERS.map(t => ({ name: formatRoleName(`${mode} ${t.name}`), color: t.color }));
+    const skipped = toCreate.filter(r => existing.has(r.name));
+    const needed = toCreate.filter(r => !existing.has(r.name));
+
+    if (needed.length === 0) {
+      await interaction.editReply({ content: `✅ All **${mode}** roles already exist.` });
+      return;
+    }
+
+    await interaction.editReply({ content: `⚙️ Creating ${needed.length} ${mode} roles...` });
+
+    let created = 0;
+    const failed: string[] = [];
+    for (let i = 0; i < needed.length; i++) {
+      try {
+        await guild.roles.create({ name: needed[i].name, color: needed[i].color, hoist: false, mentionable: false, reason: `GTG ${mode}` });
+        created++;
+        await interaction.editReply({ content: `⚙️ ${mode}: ${created}/${needed.length} roles created...` });
+      } catch (e: any) {
+        failed.push(needed[i].name);
+      }
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle(`✅ ${mode} Roles Created`)
+      .setDescription(
+        `**Created:** ${created}/${needed.length} for ${mode}\n` +
+        (skipped.length ? `**Already existed:** ${skipped.length}\n` : '') +
+        (failed.length ? `**Failed:** ${failed.length}\n${failed.slice(0, 3).map(n => `• ${n}`).join('\n')}` : '')
+      )
+      .setColor(0x2ECC71).setTimestamp();
+
+    await interaction.editReply({ content: null, embeds: [embed] as any });
+  }
+
   static async handleButton(interaction: any) {
     if (!interaction.customId.startsWith('gtg_create_')) return;
 
@@ -292,6 +348,10 @@ export class GtgCommand {
       .addSubcommand(sub => sub
         .setName('list')
         .setDescription('Read all_roles_list.txt and bulk create roles from it'))
+      .addSubcommand(sub => sub
+        .setName('mode')
+        .setDescription('Create all 10 tiers for a specific PvP mode')
+        .addStringOption(opt => opt.setName('mode').setDescription('PvP mode name').setRequired(true).setAutocomplete(true)))
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
       .setDMPermission(false);
   }

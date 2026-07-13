@@ -38,6 +38,7 @@ const discord_js_1 = require("discord.js");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const roles_1 = require("../roles");
+const textStyles_1 = require("../utils/textStyles");
 const roleCreator_1 = require("../utils/roleCreator");
 const gtgState = new Map();
 function isStaff(member) {
@@ -70,6 +71,9 @@ class GtgCommand {
         }
         else if (sub === 'list') {
             await this.handleList(interaction);
+        }
+        else if (sub === 'mode') {
+            await this.handleMode(interaction);
         }
         else {
             await this.handleGtg(interaction);
@@ -191,6 +195,48 @@ class GtgCommand {
             .setTimestamp();
         await interaction.editReply({ content: null, embeds: [embed] });
     }
+    async handleMode(interaction) {
+        if (!isStaff(interaction.member)) {
+            await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        const mode = interaction.options.getString('mode', true);
+        if (!roles_1.MODES.includes(mode)) {
+            await interaction.reply({ content: `❌ Invalid mode. Available: ${roles_1.MODES.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
+        const guild = interaction.guild;
+        await guild.roles.fetch();
+        const existing = new Set(guild.roles.cache.map((r) => r.name));
+        const toCreate = roles_1.TIERS.map(t => ({ name: (0, textStyles_1.formatRoleName)(`${mode} ${t.name}`), color: t.color }));
+        const skipped = toCreate.filter(r => existing.has(r.name));
+        const needed = toCreate.filter(r => !existing.has(r.name));
+        if (needed.length === 0) {
+            await interaction.editReply({ content: `✅ All **${mode}** roles already exist.` });
+            return;
+        }
+        await interaction.editReply({ content: `⚙️ Creating ${needed.length} ${mode} roles...` });
+        let created = 0;
+        const failed = [];
+        for (let i = 0; i < needed.length; i++) {
+            try {
+                await guild.roles.create({ name: needed[i].name, color: needed[i].color, hoist: false, mentionable: false, reason: `GTG ${mode}` });
+                created++;
+                await interaction.editReply({ content: `⚙️ ${mode}: ${created}/${needed.length} roles created...` });
+            }
+            catch (e) {
+                failed.push(needed[i].name);
+            }
+        }
+        const embed = new discord_js_1.EmbedBuilder()
+            .setTitle(`✅ ${mode} Roles Created`)
+            .setDescription(`**Created:** ${created}/${needed.length} for ${mode}\n` +
+            (skipped.length ? `**Already existed:** ${skipped.length}\n` : '') +
+            (failed.length ? `**Failed:** ${failed.length}\n${failed.slice(0, 3).map(n => `• ${n}`).join('\n')}` : ''))
+            .setColor(0x2ECC71).setTimestamp();
+        await interaction.editReply({ content: null, embeds: [embed] });
+    }
     static async handleButton(interaction) {
         if (!interaction.customId.startsWith('gtg_create_'))
             return;
@@ -286,6 +332,10 @@ class GtgCommand {
             .addSubcommand(sub => sub
             .setName('list')
             .setDescription('Read all_roles_list.txt and bulk create roles from it'))
+            .addSubcommand(sub => sub
+            .setName('mode')
+            .setDescription('Create all 10 tiers for a specific PvP mode')
+            .addStringOption(opt => opt.setName('mode').setDescription('PvP mode name').setRequired(true).setAutocomplete(true)))
             .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.ManageRoles)
             .setDMPermission(false);
     }

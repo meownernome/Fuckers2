@@ -18,10 +18,8 @@ export const CATEGORIES: { key: string; name: string }[] = [
 const MODE_EMOJI: Record<string, string> = {
   'Sword': '⚔️', 'Crystal': '💎', 'SMP': '🛡️', 'Netherite Pot': '🌋', 'Diamond Pot': '💠',
   'UHC': '❤️', 'BuildUHC': '🏗️', 'NoDebuff': '🚫', 'Combo': '🥊', 'Gapple': '🍎',
-  'OP Duel': '⚡', 'Boxing': '🥊', 'Axe': '🪓', 'Mace': '🔨', 'Anchor': '⚓',
-  'Cart PvP': '🛒', 'Bedwars': '🛏️', 'Skywars': '☁️', 'Bridge': '🌉', 'Nodebuff': '🔥',
-  'Vanilla': '🌿', 'Crossbow': '🏹', 'Trident': '🔱', 'Shield': '🛡️', 'Elytra Combat': '🦅',
-  'Custom Duel': '🎯',
+  'OP Duel': '⚡', 'Boxing': '🥊', 'Axe': '🪓', 'Bedwars': '🛏️', 'Skywars': '☁️',
+  'Bridge': '🌉', 'Nodebuff': '🔥', 'Vanilla': '🌿', 'Shield': '🛡️', 'Custom Duel': '🎯',
 };
 
 export const CHANNEL_KEYS: Record<string, string> = {
@@ -237,7 +235,7 @@ export class ServerSetup {
     if (faq) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＦＡＱ ✦ 」')
-        .setDescription('### ❓ Frequently Asked Questions\n\n**Q: How does tier testing work?**\nA: Request a test in <#request-tier-test>. A tester will claim your ticket and test you in your chosen mode.\n\n**Q: What tiers are there?**\nA: LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 (8 tiers per mode)\n\n**Q: How do I become a tier tester?**\nA: Apply using the tester application form.\n\n**Q: What if I need help?**\nA: Open a ticket in <#create-ticket>.\n\n**Q: What is the server IP?**\nA: `play.harvalmc.fun`')
+        .setDescription('### ❓ Frequently Asked Questions\n\n**Q: How does tier testing work?**\nA: Request a test in <#request-tier-test>. A tester will claim your ticket and test you in your chosen mode.\n\n**Q: What tiers are there?**\nA: LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5 (10 tiers per mode)\n\n**Q: How do I become a tier tester?**\nA: Apply using the tester application form.\n\n**Q: What if I need help?**\nA: Open a ticket in <#create-ticket>.\n\n**Q: What is the server IP?**\nA: `play.harvalmc.fun`')
         .setColor(0x3498DB).setFooter({ text: '✦ FAQ ✦ ┃ Updated regularly' }).setTimestamp();
       await faq.send({ embeds: [e] as any }).catch(() => {});
     }
@@ -258,7 +256,7 @@ export class ServerSetup {
     if (rtt) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＴＩＥＲ ＴＥＳＴ ✦ 」')
-        .setDescription('### ⚔️ Request Tier Test\n\nClick the button below to request a tier test.\nA ticket will be created where a tester will assess your skills.\n\n**Available Modes:** Sword, Crystal, UHC, Boxing, Gapple, NoDebuff, Combo, Axe, Bedwars, Skywars, Bridge, and more.\n\n**Tiers:** LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4')
+        .setDescription('### ⚔️ Request Tier Test\n\nClick the button below to request a tier test.\nA ticket will be created where a tester will assess your skills.\n\n**Available Modes:** Sword, Crystal, UHC, Boxing, Gapple, NoDebuff, Combo, Axe, Bedwars, Skywars, Bridge, and more.\n\n**Tiers:** LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5')
         .setColor(0xE67E22).setFooter({ text: '✦ TIER TEST ✦' }).setTimestamp();
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId('request_tier_test').setLabel('⚔️ Request Tier Test').setStyle(ButtonStyle.Primary),

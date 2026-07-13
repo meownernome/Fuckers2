@@ -24,7 +24,6 @@ const client = new discord_js_1.Client({
 const commands = (0, commands_1.getAllCommands)();
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN || '';
 const TICKET_STATE = new Map();
-const MODES = ['Sword', 'Crystal', 'SMP', 'Netherite Pot', 'Diamond Pot', 'UHC', 'BuildUHC', 'NoDebuff', 'Combo', 'Gapple', 'OP Duel', 'Boxing', 'Axe', 'Mace', 'Anchor', 'Cart PvP', 'Bedwars', 'Skywars', 'Bridge', 'Nodebuff', 'Vanilla', 'Crossbow', 'Trident', 'Shield', 'Elytra Combat', 'Custom Duel'];
 const MODE_EMOJI = {
     'Sword': '⚔️', 'Crystal': '💎', 'SMP': '🛡️', 'Netherite Pot': '🌋', 'Diamond Pot': '💠',
     'UHC': '❤️', 'BuildUHC': '🏗️', 'NoDebuff': '🚫', 'Combo': '🥊', 'Gapple': '🍎',
@@ -140,6 +139,14 @@ client.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
             const cmd = commands.find((c) => c.command.name === interaction.commandName);
             if (cmd)
                 await cmd.execute(interaction);
+            return;
+        }
+        if (interaction.isAutocomplete()) {
+            if (interaction.commandName === 'gtg' && interaction.options.getFocused(true).name === 'mode') {
+                const focused = interaction.options.getFocused(true).value.toLowerCase();
+                const choices = roles_1.MODES.filter(m => m.toLowerCase().includes(focused)).slice(0, 25);
+                await interaction.respond(choices.map(m => ({ name: m, value: m })));
+            }
             return;
         }
         if (interaction.isButton())
@@ -341,9 +348,9 @@ async function handleModal(interaction) {
     if (id === 'tier_test_request') {
         const mode = interaction.fields.getTextInputValue('mode').trim();
         const ign = interaction.fields.getTextInputValue('ign').trim();
-        const match = MODES.find(m => m.toLowerCase() === mode.toLowerCase());
+        const match = roles_1.MODES.find(m => m.toLowerCase() === mode.toLowerCase());
         if (!match) {
-            await interaction.reply({ content: `❌ Invalid mode. Options: ${MODES.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: `❌ Invalid mode. Options: ${roles_1.MODES.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const ticket = await new ServerSetup_1.ServerSetup(interaction.client, interaction.guild).createTicket(match, {

@@ -4,7 +4,7 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, Butt
 import { getAllCommands } from './commands';
 import { ServerSetup, CATEGORIES, CHANNEL_KEYS } from './ServerSetup';
 import { GtgCommand } from './commands/GtgCommand';
-import { ALL_ROLES, getTierRoleName, STAFF_EMOJI_PREFIX } from './roles';
+import { ALL_ROLES, getTierRoleName, STAFF_EMOJI_PREFIX, MODES } from './roles';
 import { formatStaffRoleName, toMathBold } from './utils/textStyles';
 import { createRole } from './utils/roleCreator';
 import { logger } from './utils/Logger';
@@ -25,7 +25,6 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN
 
 const TICKET_STATE = new Map<string, { channelId: string; mode: string; playerId: string; playerName: string; playerDisplay: string; claimedBy?: string; claimedByName?: string }>();
 
-const MODES = ['Sword', 'Crystal', 'SMP', 'Netherite Pot', 'Diamond Pot', 'UHC', 'BuildUHC', 'NoDebuff', 'Combo', 'Gapple', 'OP Duel', 'Boxing', 'Axe', 'Mace', 'Anchor', 'Cart PvP', 'Bedwars', 'Skywars', 'Bridge', 'Nodebuff', 'Vanilla', 'Crossbow', 'Trident', 'Shield', 'Elytra Combat', 'Custom Duel'];
 
 const MODE_EMOJI: Record<string, string> = {
   'Sword': '⚔️', 'Crystal': '💎', 'SMP': '🛡️', 'Netherite Pot': '🌋', 'Diamond Pot': '💠',
@@ -141,6 +140,14 @@ client.on(Events.InteractionCreate, async (interaction: any) => {
     if (interaction.isCommand()) {
       const cmd = commands.find((c: any) => c.command.name === interaction.commandName);
       if (cmd) await cmd.execute(interaction);
+      return;
+    }
+    if (interaction.isAutocomplete()) {
+      if (interaction.commandName === 'gtg' && interaction.options.getFocused(true).name === 'mode') {
+        const focused = interaction.options.getFocused(true).value.toLowerCase();
+        const choices = MODES.filter(m => m.toLowerCase().includes(focused)).slice(0, 25);
+        await interaction.respond(choices.map(m => ({ name: m, value: m })));
+      }
       return;
     }
     if (interaction.isButton()) await handleButton(interaction);

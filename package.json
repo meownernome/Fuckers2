@@ -4,17 +4,18 @@
   "description": "Discord bot for Harval MC - Minecraft PvP Tier Testing Network",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "echo Build skipped - using pre-built dist",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
     "typescript": "^5.9.3",
     "@types/node": "^20.19.43"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=22.0.0"
   }

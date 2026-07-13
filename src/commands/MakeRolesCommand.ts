@@ -68,7 +68,7 @@ export class MakeRolesCommand {
       }
 
       if (i < rolesToCreate.length - 1) {
-        await sleep(900);
+        await sleep(1200);
       }
     }
 

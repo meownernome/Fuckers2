@@ -101,7 +101,7 @@ class GtgCommand {
             .setCustomId('gtg_add_modal')
             .setTitle('Bulk Add Roles');
         const sample = roles_1.ALL_ROLES.slice(0, 1).map(r => `${r.name}, #${r.color.toString(16).padStart(6, '0')}`).join(', ');
-        const placeholder = `e.g. ${sample} (one per line)`;
+        const placeholder = `e.g. ${sample} (max 4000 chars total)`;
         modal.addComponents(new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.TextInputBuilder()
             .setCustomId('roles_data')
             .setLabel('RoleName, #HexColor (one per line)')
@@ -154,6 +154,7 @@ class GtgCommand {
                 if ((i + 1) % 5 === 0 || i === roles.length - 1) {
                     await interaction.editReply({ content: `⚙️ Creating roles... ${i + 1}/${roles.length} (${created} done)` });
                 }
+                await new Promise(r => setTimeout(r, 2000));
             }
             catch (e) {
                 failed.push(roles[i].name);

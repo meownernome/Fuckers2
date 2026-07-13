@@ -115,7 +115,7 @@ export class GtgCommand {
       .setTitle('Bulk Add Roles');
 
     const sample = ALL_ROLES.slice(0, 1).map(r => `${r.name}, #${r.color.toString(16).padStart(6, '0')}`).join(', ');
-    const placeholder = `e.g. ${sample} (one per line)`;
+    const placeholder = `e.g. ${sample} (max 4000 chars total)`;
 
     modal.addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
@@ -175,6 +175,7 @@ export class GtgCommand {
         if ((i + 1) % 5 === 0 || i === roles.length - 1) {
           await interaction.editReply({ content: `⚙️ Creating roles... ${i + 1}/${roles.length} (${created} done)` });
         }
+        await new Promise(r => setTimeout(r, 2000));
       } catch (e: any) {
         failed.push(roles[i].name);
       }

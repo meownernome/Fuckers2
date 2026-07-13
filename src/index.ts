@@ -1,12 +1,13 @@
 import dotenv from 'dotenv';
 import express from 'express';
-import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits, MessageFlags, GuildMember } from 'discord.js';
 import { getAllCommands } from './commands';
 import { ServerSetup, CATEGORIES, CHANNEL_KEYS } from './ServerSetup';
 import { GtgCommand } from './commands/GtgCommand';
-import { ALL_ROLES, getTierRoleName } from './roles';
-import { formatStaffRoleName } from './utils/textStyles';
+import { ALL_ROLES, getTierRoleName, STAFF_EMOJI_PREFIX } from './roles';
+import { formatStaffRoleName, toMathBold } from './utils/textStyles';
 import { createRole } from './utils/roleCreator';
+import { logger } from './utils/Logger';
 
 dotenv.config();
 
@@ -48,6 +49,13 @@ const TIERS = [
   { prefix: 'HT', level: 5, name: 'HT 5', color: 0xF1C40F },
 ];
 
+async function logToChannel(guild: any, key: string, embed: EmbedBuilder) {
+  const name = CHANNEL_KEYS[key];
+  if (!name) return;
+  const ch = guild.channels.cache.find((c: any) => c.name === name && c.type === ChannelType.GuildText) as any;
+  if (ch) ch.send({ embeds: [embed] as any }).catch(() => {});
+}
+
 async function registerCommands() {
   for (const guild of client.guilds.cache.values()) {
     try {
@@ -61,11 +69,36 @@ client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user!.tag}`);
   await registerCommands();
   console.log(`Total commands: ${commands.length}`);
-
-  // Auto-create all roles on startup
   for (const guild of client.guilds.cache.values()) {
     await ensureAllRoles(guild);
   }
+});
+
+client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
+  const guild = member.guild;
+  const memberRoleName = formatStaffRoleName('👤', 'Member');
+  const memberRole = guild.roles.cache.find((r: any) => r.name === memberRoleName);
+  if (memberRole) member.roles.add(memberRole).catch(() => {});
+
+  const welcomeName = CHANNEL_KEYS['welcome'];
+  const welcomeCh = guild.channels.cache.find((c: any) => c.name === welcomeName && c.type === ChannelType.GuildText) as any;
+  if (welcomeCh) {
+    const embed = new EmbedBuilder()
+      .setTitle('\u300C \u2726 ＷＥＬＣＯＭＥ \u2726 \u300D')
+      .setDescription(`### 👋 Welcome ${member.user}\n\nWe hope you enjoy your stay at **HARVAL MC**!\n\n> 📜 Read the rules\n> ✅ Verify in <#verify>\n> ⚔️ Request a tier test`)
+      .setColor(0xFFD700)
+      .setFooter({ text: `\u2726 Member #${guild.memberCount} \u2726` })
+      .setTimestamp();
+    welcomeCh.send({ embeds: [embed] as any, content: `${member.user}` }).catch(() => {});
+  }
+
+  const logEmbed = new EmbedBuilder()
+    .setTitle('\u300C \u2726 ＪＯＩＮ \u2726 \u300D')
+    .setDescription(`**${member.user.tag}** joined the server.`)
+    .setColor(0x2ECC71)
+    .setFooter({ text: `ID: ${member.id}` })
+    .setTimestamp();
+  await logToChannel(guild, 'join-leave', logEmbed);
 });
 
 async function ensureAllRoles(guild: any) {
@@ -73,12 +106,10 @@ async function ensureAllRoles(guild: any) {
     await guild.roles.fetch();
     const existing = new Set(guild.roles.cache.map((r: any) => r.name));
     const missing = ALL_ROLES.filter(r => !existing.has(r.name));
-
     if (missing.length === 0) {
       console.log(`✅ All ${ALL_ROLES.length} roles already exist in ${guild.name}`);
       return;
     }
-
     console.log(`🔧 Creating ${missing.length} missing roles in ${guild.name}...`);
     let created = 0;
     for (const role of missing) {
@@ -176,6 +207,33 @@ async function handleButton(interaction: any) {
     return;
   }
 
+  if (id.startsWith('app_approve_')) {
+    await interaction.deferUpdate();
+    const targetId = id.replace('app_approve_', '');
+    const member = await interaction.guild.members.fetch(targetId).catch(() => null);
+    if (member) {
+      const staffRole = interaction.guild.roles.cache.find((r: any) => STAFF_EMOJI_PREFIX.test(r.name));
+      if (staffRole) member.roles.add(staffRole).catch(() => {});
+    }
+    const embed = EmbedBuilder.from(interaction.message.embeds[0])
+      .setColor(0x2ECC71)
+      .setFooter({ text: `\u2714 Approved by ${interaction.user.tag}` });
+    await interaction.editReply({ embeds: [embed] as any, components: [] });
+    await interaction.channel.send({ content: `✅ <@${targetId}> your application was **approved**!` });
+    return;
+  }
+
+  if (id.startsWith('app_decline_')) {
+    await interaction.deferUpdate();
+    const targetId = id.replace('app_decline_', '');
+    const embed = EmbedBuilder.from(interaction.message.embeds[0])
+      .setColor(0xE74C3C)
+      .setFooter({ text: `\u2718 Declined by ${interaction.user.tag}` });
+    await interaction.editReply({ embeds: [embed] as any, components: [] });
+    await interaction.channel.send({ content: `❌ <@${targetId}> your application was **declined**.` });
+    return;
+  }
+
   if (id.startsWith('ticket_claim_')) {
     const channelId = id.replace('ticket_claim_', '');
     const state = TICKET_STATE.get(channelId);
@@ -188,13 +246,13 @@ async function handleButton(interaction: any) {
     const emoji = MODE_EMOJI[state.mode] || '🎮';
 
     const playerEmbed = new EmbedBuilder()
-      .setTitle(`「 ✦ ＴＩＣＫＥＴ ✦ 」`)
+      .setTitle(`\u300C \u2726 ＴＩＣＫＥＴ \u2726 \u300D`)
       .setDescription(`### ${emoji} ${state.mode} — ${state.playerDisplay}\n\n**Player:** ${state.playerDisplay}\n**Mode:** ${emoji} ${state.mode}\n**Tester:** ⚔️ ${state.claimedByName}\n**Status:** 🟢 In Progress\n\n> **${state.claimedByName}** has claimed your ticket.`)
-      .setColor(0x2ECC71).setFooter({ text: '✦ TICKET ✦' }).setTimestamp();
+      .setColor(0x2ECC71).setFooter({ text: '\u2726 TICKET \u2726' }).setTimestamp();
     await interaction.update({ embeds: [playerEmbed] as any, components: [] });
 
     const staffEmbed = new EmbedBuilder()
-      .setTitle('「 ✦ ＣＯＮＴＲＯＬ ✦ 」')
+      .setTitle('\u300C \u2726 ＣＯＮＴＲＯＬ \u2726 \u300D')
       .setDescription(`### Staff Panel\n\nClaimed by **${state.claimedByName}**\n\n▶️ **Start** — Send IP\n🏆 **Give Tier** — Assign result\n✅ **Finish** — Close ticket`)
       .setColor(0x3498DB).setFooter({ text: state.playerDisplay }).setTimestamp();
     const staffRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -234,18 +292,6 @@ async function handleButton(interaction: any) {
     setTimeout(async () => { try { await interaction.channel?.delete(); } catch {} }, 3000);
     return;
   }
-
-  if (id.startsWith('gtg_create_')) {
-    const { GtgCommand } = await import('./commands/GtgCommand');
-    await GtgCommand.handleButton(interaction);
-    return;
-  }
-
-  if (id.startsWith('gtg_skip_')) {
-    const { GtgCommand } = await import('./commands/GtgCommand');
-    await GtgCommand.handleSkip(interaction);
-    return;
-  }
 }
 
 async function handleModal(interaction: any) {
@@ -257,6 +303,12 @@ async function handleModal(interaction: any) {
     const verifyRole = interaction.guild.roles.cache.find((r: any) => r.name === verifiedRoleName);
     if (verifyRole) { try { await interaction.member.roles.add(verifyRole); } catch {} }
     await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, flags: MessageFlags.Ephemeral });
+
+    const logEmbed = new EmbedBuilder()
+      .setTitle('\u300C \u2726 ＶＥＲＩＦＹ \u2726 \u300D')
+      .setDescription(`**${interaction.user.tag}** verified as **${ign}**.`)
+      .setColor(0x2ECC71).setTimestamp();
+    await logToChannel(interaction.guild, 'verification-logs', logEmbed);
     return;
   }
 
@@ -273,8 +325,18 @@ async function handleModal(interaction: any) {
         { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
       ],
     });
-    await ch.send({ content: `🎫 Support ticket — <@${interaction.user.id}>\n**Subject:** ${subject}\n${desc}` });
+    const embed = new EmbedBuilder()
+      .setTitle('\u300C \u2726 ＳＵＰＰＯＲＴ \u2726 \u300D')
+      .setDescription(`### 🎫 Support Ticket\n\n**User:** ${interaction.user}\n**Subject:** ${subject}\n**Description:** ${desc}`)
+      .setColor(0xF1C40F).setTimestamp();
+    await ch.send({ embeds: [embed] as any, content: `<@${interaction.user.id}>` });
     await interaction.reply({ content: `✅ Ticket created: <#${ch.id}>`, flags: MessageFlags.Ephemeral });
+
+    const logEmbed = new EmbedBuilder()
+      .setTitle('\u300C \u2726 ＴＩＣＫＥＴ \u2726 \u300D')
+      .setDescription(`**${interaction.user.tag}** opened a support ticket.\n**Subject:** ${subject}`)
+      .setColor(0xF1C40F).setTimestamp();
+    await logToChannel(interaction.guild, 'ticket-logs', logEmbed);
     return;
   }
 
@@ -293,14 +355,20 @@ async function handleModal(interaction: any) {
     TICKET_STATE.set(ticket.id, { channelId: ticket.id, mode: match, playerId: interaction.user.id, playerName: interaction.user.username, playerDisplay: ign });
 
     const embed = new EmbedBuilder()
-      .setTitle(`「 ✦ ＴＩＣＫＥＴ ✦ 」`)
+      .setTitle(`\u300C \u2726 ＴＩＣＫＥＴ \u2726 \u300D`)
       .setDescription(`### ${emoji} ${match} — ${ign}\n\n**Player:** ${ign}\n**Mode:** ${emoji} ${match}\n**Status:** 🟡 Awaiting Claim\n\n> A tester will claim your ticket shortly.`)
-      .setColor(0xF1C40F).setFooter({ text: '✦ TICKET ✦' }).setTimestamp();
+      .setColor(0xF1C40F).setFooter({ text: '\u2726 TICKET \u2726' }).setTimestamp();
     const claimRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId(`ticket_claim_${ticket.id}`).setLabel('Claim Ticket').setEmoji('⚔️').setStyle(ButtonStyle.Primary),
     );
     await ticket.send({ embeds: [embed] as any, components: [claimRow as any], content: `<@${interaction.user.id}>` });
     await interaction.reply({ content: `✅ ${match} ticket ready: <#${ticket.id}>`, flags: MessageFlags.Ephemeral });
+
+    const logEmbed = new EmbedBuilder()
+      .setTitle('\u300C \u2726 ＴＩＥＲ ＴＥＳＴ \u2726 \u300D')
+      .setDescription(`**${interaction.user.tag}** requested a tier test.\n**Mode:** ${emoji} ${match}\n**IGN:** ${ign}`)
+      .setColor(0xE67E22).setTimestamp();
+    await logToChannel(interaction.guild, 'tier-logs', logEmbed);
     return;
   }
 
@@ -328,17 +396,7 @@ async function handleModal(interaction: any) {
     const age = interaction.fields.getTextInputValue('age');
     const exp = interaction.fields.getTextInputValue('experience');
     const why = interaction.fields.getTextInputValue('why');
-    const appChName = CHANNEL_KEYS['applications'];
-    const appCh = interaction.guild.channels.cache.find((c: any) => c.name === appChName);
-    if (appCh) {
-      await appCh.send({ embeds: [new EmbedBuilder().setTitle('Staff Application').addFields(
-        { name: 'Applicant', value: `<@${interaction.user.id}>`, inline: true },
-        { name: 'Age', value: age, inline: true },
-        { name: 'Experience', value: exp },
-        { name: 'Why', value: why },
-      ).setColor(0x9B59B6).setTimestamp()] as any });
-    }
-    await interaction.reply({ content: '✅ Application submitted!', flags: MessageFlags.Ephemeral });
+    await handleApplication(interaction, '📝 Staff Application', 'staff', { 'Age': age, 'Experience': exp, 'Why': why }, 0x9B59B6);
     return;
   }
 
@@ -346,19 +404,48 @@ async function handleModal(interaction: any) {
     const ign = interaction.fields.getTextInputValue('ign');
     const pvp = interaction.fields.getTextInputValue('pvp_experience');
     const why = interaction.fields.getTextInputValue('why');
-    const appChName = CHANNEL_KEYS['applications'];
-    const appCh = interaction.guild.channels.cache.find((c: any) => c.name === appChName);
-    if (appCh) {
-      await appCh.send({ embeds: [new EmbedBuilder().setTitle('Tester Application').addFields(
-        { name: 'Applicant', value: `<@${interaction.user.id}>`, inline: true },
-        { name: 'IGN', value: ign, inline: true },
-        { name: 'PvP Experience', value: pvp },
-        { name: 'Why', value: why },
-      ).setColor(0xE67E22).setTimestamp()] as any });
-    }
-    await interaction.reply({ content: '✅ Application submitted!', flags: MessageFlags.Ephemeral });
+    await handleApplication(interaction, '⚔️ Tier Tester Application', 'tester', { 'IGN': ign, 'PvP Experience': pvp, 'Why': why }, 0xE67E22);
     return;
   }
+}
+
+async function handleApplication(interaction: any, title: string, type: string, fields: Record<string, string>, color: number) {
+  const guild = interaction.guild;
+  const staffCat = CATEGORIES.find(c => c.key === 'staff');
+  const cat = guild.channels.cache.find((c: any) => c.type === ChannelType.GuildCategory && c.name === staffCat?.name);
+  const channelName = `app-${type}-${interaction.user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 32);
+
+  const ch = await guild.channels.create({
+    name: channelName,
+    type: ChannelType.GuildText,
+    parent: cat,
+    permissionOverwrites: [
+      { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+      { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+    ],
+  });
+
+  const fieldLines = Object.entries(fields).map(([k, v]) => `**${k}:** ${v}`).join('\n');
+  const embed = new EmbedBuilder()
+    .setTitle(`\u300C \u2726 ${title} \u2726 \u300D`)
+    .setDescription(`### Applicant: ${interaction.user}\n\n${fieldLines}`)
+    .setColor(color)
+    .setFooter({ text: `\u2726 Pending review \u2726` })
+    .setTimestamp();
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId(`app_approve_${interaction.user.id}`).setLabel('Approve').setEmoji('✅').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`app_decline_${interaction.user.id}`).setLabel('Decline').setEmoji('❌').setStyle(ButtonStyle.Danger),
+  );
+
+  await ch.send({ embeds: [embed] as any, components: [row as any], content: `<@&${guild.roles.everyone.id}>` });
+  await interaction.reply({ content: `✅ Application submitted! Check <#${ch.id}>`, flags: MessageFlags.Ephemeral });
+
+  const logEmbed = new EmbedBuilder()
+    .setTitle('\u300C \u2726 ＡＰＰＬＩＣＡＴＩＯＮ \u2726 \u300D')
+    .setDescription(`**${interaction.user.tag}** submitted a **${type}** application.\n${fieldLines}`)
+    .setColor(color).setTimestamp();
+  await logToChannel(guild, 'applications', logEmbed);
 }
 
 const PORT = parseInt(process.env.PORT || '8080', 10);

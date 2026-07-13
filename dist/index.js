@@ -42,8 +42,6 @@ const TIERS = [
     { prefix: 'HT', level: 3, name: 'HT 3', color: 0x3498DB },
     { prefix: 'LT', level: 4, name: 'LT 4', color: 0x8E44AD },
     { prefix: 'HT', level: 4, name: 'HT 4', color: 0x9B59B6 },
-    { prefix: 'LT', level: 5, name: 'LT 5', color: 0xD4AC0D },
-    { prefix: 'HT', level: 5, name: 'HT 5', color: 0xF1C40F },
 ];
 async function logToChannel(guild, key, embed) {
     const name = ServerSetup_1.CHANNEL_KEYS[key];
@@ -159,6 +157,21 @@ async function handleButton(interaction) {
         return GtgCommand_1.GtgCommand.handleButton(interaction);
     if (id.startsWith('gtg_skip_'))
         return GtgCommand_1.GtgCommand.handleSkip(interaction);
+    if (id === 'cleanup_confirm') {
+        await interaction.deferUpdate();
+        const setup = new ServerSetup_1.ServerSetup(interaction.client, interaction.guild);
+        const result = await setup.cleanup();
+        const embed = new discord_js_1.EmbedBuilder()
+            .setTitle('✅ Nuclear Cleanup Complete')
+            .setDescription(`**Deleted:** ${result.channels} channels, ${result.roles} roles`)
+            .setColor(0x2ECC71).setTimestamp();
+        await interaction.editReply({ embeds: [embed], components: [] });
+        return;
+    }
+    if (id === 'cleanup_cancel') {
+        await interaction.update({ content: '❌ Cleanup cancelled.', embeds: [], components: [] });
+        return;
+    }
     if (id === 'verify_button') {
         const modal = new discord_js_1.ModalBuilder().setCustomId('verify_modal').setTitle('✅ Verify Your Account');
         modal.addComponents(new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.TextInputBuilder().setCustomId('ign').setLabel('Your Minecraft IGN').setStyle(discord_js_1.TextInputStyle.Short).setRequired(true).setPlaceholder('e.g. Notch')));
@@ -384,6 +397,10 @@ async function handleModal(interaction) {
         catch (e) {
             await interaction.reply({ content: `❌ Failed: ${e.message}`, flags: discord_js_1.MessageFlags.Ephemeral });
         }
+        return;
+    }
+    if (id === 'gtg_add_modal') {
+        await GtgCommand_1.GtgCommand.handleModal(interaction);
         return;
     }
     if (id === 'staff_application') {

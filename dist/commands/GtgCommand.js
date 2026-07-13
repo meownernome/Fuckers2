@@ -20,8 +20,27 @@ function findNextIndex(guild, start) {
     }
     return roles_1.ALL_ROLES.length;
 }
+function parseHexColor(color) {
+    const hex = color.replace('#', '').replace('0x', '');
+    const val = parseInt(hex, 16);
+    if (isNaN(val))
+        return 0x99AAB5;
+    return val;
+}
 class GtgCommand {
     async execute(interaction) {
+        const sub = interaction.options.getSubcommand();
+        if (sub === 'add') {
+            await this.handleAdd(interaction);
+        }
+        else if (sub === 'list') {
+            await this.handleList(interaction);
+        }
+        else {
+            await this.handleGtg(interaction);
+        }
+    }
+    async handleGtg(interaction) {
         if (!isStaff(interaction.member)) {
             await interaction.reply({ content: '❌ This command is for staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
@@ -42,10 +61,117 @@ class GtgCommand {
             .setColor(0x3498DB)
             .setFooter({ text: '\u2726 Role creation \u2726' })
             .setTimestamp();
-        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next Role').setStyle(discord_js_1.ButtonStyle.Success).setEmoji('⚔️'));
+        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next').setStyle(discord_js_1.ButtonStyle.Success).setEmoji('⚔️'));
         await interaction.reply({ embeds: [embed], components: [row], flags: discord_js_1.MessageFlags.Ephemeral });
     }
-    static async process(interaction, stateKey) {
+    async handleAdd(interaction) {
+        if (!isStaff(interaction.member)) {
+            await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        const name = interaction.options.getString('name', true);
+        const colorStr = interaction.options.getString('color');
+        const color = colorStr ? parseHexColor(colorStr) : 0x99AAB5;
+        const guild = interaction.guild;
+        await guild.roles.fetch();
+        if (guild.roles.cache.some((r) => r.name === name)) {
+            await interaction.reply({ content: `❌ Role **${name}** already exists.`, flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
+        try {
+            await (0, roleCreator_1.createRole)(guild, name, color);
+            const embed = new discord_js_1.EmbedBuilder()
+                .setTitle('✅ Role Created')
+                .setDescription(`**Name:** ${name}\n**Color:** \`#${color.toString(16).padStart(6, '0')}\``)
+                .setColor(color)
+                .setTimestamp();
+            await interaction.editReply({ embeds: [embed] });
+        }
+        catch (e) {
+            await interaction.editReply({ content: `❌ Failed: ${e.message}` });
+        }
+    }
+    async handleList(interaction) {
+        if (!isStaff(interaction.member)) {
+            await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        const modal = new discord_js_1.ModalBuilder()
+            .setCustomId('gtg_add_modal')
+            .setTitle('Bulk Add Roles');
+        const sample = roles_1.ALL_ROLES.slice(0, 3).map(r => `${r.name}, #${r.color.toString(16).padStart(6, '0')}`).join('\n');
+        const placeholder = `Role Name, Hex Color\n${sample}\n...`;
+        modal.addComponents(new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.TextInputBuilder()
+            .setCustomId('roles_data')
+            .setLabel('RoleName, #HexColor (one per line)')
+            .setStyle(discord_js_1.TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setPlaceholder(placeholder)));
+        await interaction.showModal(modal);
+    }
+    static async processBulkAdd(interaction, data) {
+        const lines = data.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
+        if (lines.length === 0) {
+            await interaction.reply({ content: '❌ No valid role data found.', flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        const guild = interaction.guild;
+        await guild.roles.fetch();
+        const existingNames = new Set(guild.roles.cache.map((r) => r.name));
+        const roles = [];
+        const errors = [];
+        for (const line of lines) {
+            const parts = line.split(',').map(s => s.trim());
+            if (parts.length < 1 || !parts[0]) {
+                errors.push(`Invalid line: ${line}`);
+                continue;
+            }
+            const name = parts[0];
+            const color = parts[1] ? parseHexColor(parts[1]) : 0x99AAB5;
+            if (existingNames.has(name)) {
+                errors.push(`Already exists: ${name}`);
+                continue;
+            }
+            roles.push({ name, color });
+        }
+        if (roles.length === 0) {
+            await interaction.reply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
+        let created = 0;
+        const failed = [];
+        for (let i = 0; i < roles.length; i++) {
+            try {
+                await (0, roleCreator_1.createRole)(guild, roles[i].name, roles[i].color);
+                created++;
+                if ((i + 1) % 5 === 0 || i === roles.length - 1) {
+                    await interaction.editReply({ content: `⚙️ Creating roles... ${i + 1}/${roles.length} (${created} done)` });
+                }
+            }
+            catch (e) {
+                failed.push(roles[i].name);
+            }
+        }
+        const embed = new discord_js_1.EmbedBuilder()
+            .setTitle('✅ Bulk Role Creation')
+            .setDescription(`**Created:** ${created}/${roles.length}\n` +
+            (failed.length > 0 ? `**Failed:** ${failed.length}\n${failed.slice(0, 5).map(n => `• ${n}`).join('\n')}` : '') +
+            (errors.length > 0 ? `\n**Skipped:** ${errors.length} invalid lines` : ''))
+            .setColor(failed.length > 0 ? 0xF1C40F : 0x2ECC71)
+            .setTimestamp();
+        await interaction.editReply({ content: null, embeds: [embed] });
+    }
+    static async handleButton(interaction) {
+        if (!interaction.customId.startsWith('gtg_create_'))
+            return;
+        await interaction.deferUpdate();
+        if (!isStaff(interaction.member)) {
+            await interaction.editReply({ content: '❌ Staff only.', components: [] });
+            return;
+        }
+        const stateKey = interaction.customId.replace('gtg_create_', '');
         const state = gtgState.get(stateKey);
         if (!state) {
             await interaction.editReply({ content: '❌ Session expired. Run /gtg again.', components: [] });
@@ -61,7 +187,7 @@ class GtgCommand {
         if (idx >= roles_1.ALL_ROLES.length) {
             const embed = new discord_js_1.EmbedBuilder()
                 .setTitle('✅ All Done!')
-                .setDescription(`All ${roles_1.ALL_ROLES.length} roles have been created.`)
+                .setDescription(`All ${roles_1.ALL_ROLES.length} roles created.`)
                 .setColor(0x2ECC71);
             await interaction.editReply({ embeds: [embed], components: [] });
             gtgState.delete(stateKey);
@@ -74,7 +200,7 @@ class GtgCommand {
         catch (e) {
             const embed = new discord_js_1.EmbedBuilder()
                 .setTitle('❌ Failed')
-                .setDescription(`Failed to create **${role.name}**: ${e.message}\n\nTry again or skip.`)
+                .setDescription(`Failed: **${role.name}** — ${e.message}`)
                 .setColor(0xE74C3C);
             const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Retry').setStyle(discord_js_1.ButtonStyle.Danger).setEmoji('🔄'), new discord_js_1.ButtonBuilder().setCustomId(`gtg_skip_${stateKey}`).setLabel('Skip').setStyle(discord_js_1.ButtonStyle.Secondary).setEmoji('⏭️'));
             await interaction.editReply({ embeds: [embed], components: [row] });
@@ -86,7 +212,7 @@ class GtgCommand {
         if (nextIdx >= roles_1.ALL_ROLES.length) {
             const embed = new discord_js_1.EmbedBuilder()
                 .setTitle('✅ All Done!')
-                .setDescription(`Created **${role.name}**\n\nAll ${roles_1.ALL_ROLES.length} roles are now created!`)
+                .setDescription(`Created **${role.name}**\n\nAll ${roles_1.ALL_ROLES.length} roles done!`)
                 .setColor(0x2ECC71);
             await interaction.editReply({ embeds: [embed], components: [] });
             gtgState.delete(stateKey);
@@ -96,23 +222,12 @@ class GtgCommand {
         const remaining = roles_1.ALL_ROLES.length - nextIdx;
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle('\u300C \u2726 ＧＴＧ \u2726 \u300D')
-            .setDescription(`✅ Created **${role.name}**\n\n**Next role:** ${next.name}\n**Remaining:** ${remaining}/${roles_1.ALL_ROLES.length}`)
+            .setDescription(`✅ Created **${role.name}**\n\n**Next:** ${next.name}\n**Remaining:** ${remaining}/${roles_1.ALL_ROLES.length}`)
             .setColor(0x3498DB)
             .setFooter({ text: '\u2726 Role creation \u2726' })
             .setTimestamp();
-        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next Role').setStyle(discord_js_1.ButtonStyle.Success).setEmoji('⚔️'));
+        const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next').setStyle(discord_js_1.ButtonStyle.Success).setEmoji('⚔️'));
         await interaction.editReply({ embeds: [embed], components: [row] });
-    }
-    static async handleButton(interaction) {
-        if (!interaction.customId.startsWith('gtg_create_'))
-            return;
-        await interaction.deferUpdate();
-        if (!isStaff(interaction.member)) {
-            await interaction.editReply({ content: '❌ Staff only.', components: [] });
-            return;
-        }
-        const stateKey = interaction.customId.replace('gtg_create_', '');
-        await GtgCommand.process(interaction, stateKey);
     }
     static async handleSkip(interaction) {
         if (!interaction.customId.startsWith('gtg_skip_'))
@@ -124,14 +239,31 @@ class GtgCommand {
         }
         const stateKey = interaction.customId.replace('gtg_skip_', '');
         const state = gtgState.get(stateKey);
-        if (state)
-            state.idx++;
-        await GtgCommand.process(interaction, stateKey);
+        if (!state) {
+            await interaction.editReply({ content: '❌ Session expired.', components: [] });
+            return;
+        }
+        state.idx++;
+        await this.handleButton(interaction);
+    }
+    static async handleModal(interaction) {
+        if (interaction.customId !== 'gtg_add_modal')
+            return;
+        const data = interaction.fields.getTextInputValue('roles_data');
+        await GtgCommand.processBulkAdd(interaction, data);
     }
     get command() {
         return new discord_js_1.SlashCommandBuilder()
             .setName('gtg')
-            .setDescription('Create roles one by one (staff only)')
+            .setDescription('Create roles (staff only)')
+            .addSubcommand(sub => sub
+            .setName('add')
+            .setDescription('Manually add a single role by name and color')
+            .addStringOption(opt => opt.setName('name').setDescription('Role name').setRequired(true))
+            .addStringOption(opt => opt.setName('color').setDescription('Hex color (e.g. #FF0000)').setRequired(false)))
+            .addSubcommand(sub => sub
+            .setName('list')
+            .setDescription('Bulk add roles by pasting a formatted list'))
             .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.ManageRoles)
             .setDMPermission(false);
     }

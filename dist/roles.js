@@ -20,8 +20,6 @@ const TIERS = [
     { name: 'HT 3', color: 0x3498DB },
     { name: 'LT 4', color: 0x8E44AD },
     { name: 'HT 4', color: 0x9B59B6 },
-    { name: 'LT 5', color: 0xD4AC0D },
-    { name: 'HT 5', color: 0xF1C40F },
 ];
 const STAFF_DEFS = [
     { emoji: '👑', name: 'Founder' },

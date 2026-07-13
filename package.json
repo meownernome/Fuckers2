@@ -4,7 +4,7 @@
   "description": "Discord bot for Harval MC - Minecraft PvP Tier Testing Network",
   "main": "dist/index.js",
   "scripts": {
-    "build": "echo Build skipped - using pre-built dist",
+    "build": "npm ci && echo Build skipped - using pre-built dist",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts"
   },

@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CleanupCommand = void 0;
 const discord_js_1 = require("discord.js");
 const ServerSetup_1 = require("../ServerSetup");
-const roles_1 = require("../roles");
 const Logger_1 = require("../utils/Logger");
 class CleanupCommand {
     async execute(interaction) {
@@ -28,11 +27,8 @@ class CleanupCommand {
         for (const r of [...interaction.guild.roles.cache.values()]) {
             if (r.name === '@everyone' || r.managed)
                 continue;
-            const match = roles_1.ALL_ROLES.some(ar => ar.name === r.name);
-            if (match) {
-                await r.delete().catch(() => { });
-                deleted++;
-            }
+            await r.delete().catch(() => { });
+            deleted++;
         }
         const embed = new discord_js_1.EmbedBuilder()
             .setTitle('✅ Cleanup Roles')
@@ -80,7 +76,7 @@ class CleanupCommand {
             .setDescription('Delete only channels and categories'))
             .addSubcommand(sub => sub
             .setName('roles')
-            .setDescription('Delete only bot-created roles'))
+            .setDescription('Delete ALL deletable roles'))
             .setDMPermission(false);
     }
 }

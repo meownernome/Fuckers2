@@ -1,6 +1,5 @@
 import { MessageFlags, SlashCommandBuilder, ChatInputCommandInteraction, ChannelType, EmbedBuilder, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { ServerSetup } from '../ServerSetup';
-import { ALL_ROLES } from '../roles';
 import { logger } from '../utils/Logger';
 
 export class CleanupCommand {
@@ -27,11 +26,8 @@ export class CleanupCommand {
     let deleted = 0;
     for (const r of [...interaction.guild!.roles.cache.values()]) {
       if (r.name === '@everyone' || r.managed) continue;
-      const match = ALL_ROLES.some(ar => ar.name === r.name);
-      if (match) {
-        await r.delete().catch(() => {});
-        deleted++;
-      }
+      await r.delete().catch(() => {});
+      deleted++;
     }
 
     const embed = new EmbedBuilder()
@@ -92,7 +88,7 @@ export class CleanupCommand {
         .setDescription('Delete only channels and categories'))
       .addSubcommand(sub => sub
         .setName('roles')
-        .setDescription('Delete only bot-created roles'))
+        .setDescription('Delete ALL deletable roles'))
       .setDMPermission(false);
   }
 }

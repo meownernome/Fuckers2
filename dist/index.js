@@ -5,6 +5,7 @@ const discord_js_1 = require("discord.js");
 const roles_js_1 = require("./roles.js");
 const Logger_js_1 = require("./utils/Logger.js");
 const ServerSetup_js_1 = require("./ServerSetup.js");
+const http_1 = require("http");
 const AllCommand_js_1 = require("./commands/AllCommand.js");
 const SetupCommand_js_1 = require("./commands/SetupCommand.js");
 const CleanupCommand_js_1 = require("./commands/CleanupCommand.js");
@@ -459,5 +460,14 @@ client.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
 });
 client.login(TOKEN).catch((error) => {
     Logger_js_1.Logger.error('Discord login failed', error);
+});
+// Simple HTTP server for Render health checks
+const PORT = parseInt(process.env.PORT || '10000', 10);
+const healthServer = (0, http_1.createServer)((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', bot: client.user?.tag || 'starting' }));
+});
+healthServer.listen(PORT, () => {
+    Logger_js_1.Logger.info(`[HTTP] Health check server running on port ${PORT}`);
 });
 //# sourceMappingURL=index.js.map

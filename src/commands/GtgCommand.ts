@@ -151,23 +151,23 @@ export class GtgCommand {
       return;
     }
 
-    await interaction.editReply({ content: `⚙️ Creating ${toCreate.length} roles... (this may take a few minutes)` });
+    await interaction.editReply({ content: `⚙️ Creating ${toCreate.length} roles in batches of 5...` });
 
-    let created = 0;
     const failed: string[] = [];
+    const BATCH = 5;
 
-    for (let i = 0; i < toCreate.length; i++) {
-      try {
-        await guild.roles.create({ name: toCreate[i].name, color: toCreate[i].color, hoist: false, mentionable: false, reason: 'GTG bulk' });
-        created++;
-        if (created % 10 === 0 || i === toCreate.length - 1) {
-          await interaction.editReply({ content: `⚙️ ${created}/${toCreate.length} roles created...` });
-        }
-      } catch (e: any) {
-        failed.push(toCreate[i].name);
-      }
+    for (let i = 0; i < toCreate.length; i += BATCH) {
+      const batch = toCreate.slice(i, i + BATCH);
+      const results = await Promise.allSettled(
+        batch.map(r => guild.roles.create({ name: r.name, color: r.color, hoist: false, mentionable: false, reason: 'GTG bulk' })
+          .then(() => true)
+          .catch(() => { failed.push(r.name); return false; }))
+      );
+      const done = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+      await interaction.editReply({ content: `⚙️ Created ${Math.min(i + BATCH, toCreate.length)}/${toCreate.length} roles...` });
     }
 
+    const created = toCreate.length - failed.length;
     const embed = new EmbedBuilder()
       .setTitle('✅ Bulk Role Creation')
       .setDescription(
@@ -210,18 +210,20 @@ export class GtgCommand {
 
     await interaction.editReply({ content: `⚙️ Creating ${needed.length} ${mode} roles...` });
 
-    let created = 0;
     const failed: string[] = [];
-    for (let i = 0; i < needed.length; i++) {
-      try {
-        await guild.roles.create({ name: needed[i].name, color: needed[i].color, hoist: false, mentionable: false, reason: `GTG ${mode}` });
-        created++;
-        await interaction.editReply({ content: `⚙️ ${mode}: ${created}/${needed.length} roles created...` });
-      } catch (e: any) {
-        failed.push(needed[i].name);
-      }
+    const BATCH = 5;
+
+    for (let i = 0; i < needed.length; i += BATCH) {
+      const batch = needed.slice(i, i + BATCH);
+      await Promise.allSettled(
+        batch.map(r => guild.roles.create({ name: r.name, color: r.color, hoist: false, mentionable: false, reason: `GTG ${mode}` })
+          .then(() => {})
+          .catch(() => { failed.push(r.name); }))
+      );
+      await interaction.editReply({ content: `⚙️ ${mode}: ${Math.min(i + BATCH, needed.length)}/${needed.length} roles created...` });
     }
 
+    const created = needed.length - failed.length;
     const embed = new EmbedBuilder()
       .setTitle(`✅ ${mode} Roles Created`)
       .setDescription(

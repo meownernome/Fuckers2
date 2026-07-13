@@ -114,8 +114,8 @@ export class GtgCommand {
       .setCustomId('gtg_add_modal')
       .setTitle('Bulk Add Roles');
 
-    const sample = ALL_ROLES.slice(0, 3).map(r => `${r.name}, #${r.color.toString(16).padStart(6, '0')}`).join('\n');
-    const placeholder = `Role Name, Hex Color\n${sample}\n...`;
+    const sample = ALL_ROLES.slice(0, 1).map(r => `${r.name}, #${r.color.toString(16).padStart(6, '0')}`).join(', ');
+    const placeholder = `e.g. ${sample} (one per line)`;
 
     modal.addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(

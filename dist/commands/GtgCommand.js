@@ -108,12 +108,18 @@ class GtgCommand {
             .setStyle(discord_js_1.TextInputStyle.Paragraph)
             .setRequired(true)
             .setPlaceholder(placeholder)));
-        await interaction.showModal(modal);
+        try {
+            await interaction.showModal(modal);
+        }
+        catch (e) {
+            await interaction.reply({ content: `❌ Could not open modal: ${e.message}`, flags: discord_js_1.MessageFlags.Ephemeral });
+        }
     }
     static async processBulkAdd(interaction, data) {
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const lines = data.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
         if (lines.length === 0) {
-            await interaction.reply({ content: '❌ No valid role data found.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.editReply({ content: '❌ No valid role data found.' });
             return;
         }
         const guild = interaction.guild;
@@ -136,10 +142,9 @@ class GtgCommand {
             roles.push({ name, color });
         }
         if (roles.length === 0) {
-            await interaction.reply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.editReply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}` });
             return;
         }
-        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         let created = 0;
         const failed = [];
         for (let i = 0; i < roles.length; i++) {

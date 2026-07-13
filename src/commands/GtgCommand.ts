@@ -128,13 +128,19 @@ export class GtgCommand {
       ),
     );
 
-    await interaction.showModal(modal);
+    try {
+      await interaction.showModal(modal);
+    } catch (e: any) {
+      await interaction.reply({ content: `❌ Could not open modal: ${e.message}`, flags: MessageFlags.Ephemeral });
+    }
   }
 
   private static async processBulkAdd(interaction: any, data: string) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const lines = data.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
     if (lines.length === 0) {
-      await interaction.reply({ content: '❌ No valid role data found.', flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ content: '❌ No valid role data found.' });
       return;
     }
 
@@ -155,11 +161,9 @@ export class GtgCommand {
     }
 
     if (roles.length === 0) {
-      await interaction.reply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}`, flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}` });
       return;
     }
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     let created = 0;
     const failed: string[] = [];

@@ -143,7 +143,7 @@ class GtgCommand {
             await interaction.reply({ content: '❌ No valid role data in file.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        await interaction.reply({ content: `📄 Found **${lines.length}** roles in file. Starting creation...`, flags: discord_js_1.MessageFlags.Ephemeral });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const guild = interaction.guild;
         await guild.roles.fetch();
         const existingNames = new Set(guild.roles.cache.map((r) => r.name));
@@ -167,16 +167,16 @@ class GtgCommand {
             await interaction.editReply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}` });
             return;
         }
+        await interaction.editReply({ content: `⚙️ Creating ${toCreate.length} roles... (this may take a few minutes)` });
         let created = 0;
         const failed = [];
         for (let i = 0; i < toCreate.length; i++) {
             try {
-                await (0, roleCreator_1.createRole)(guild, toCreate[i].name, toCreate[i].color);
+                await guild.roles.create({ name: toCreate[i].name, color: toCreate[i].color, hoist: false, mentionable: false, reason: 'GTG bulk' });
                 created++;
-                if ((i + 1) % 5 === 0 || i === toCreate.length - 1) {
-                    await interaction.editReply({ content: `⚙️ Creating... ${i + 1}/${toCreate.length} (${created} done)` });
+                if (created % 10 === 0 || i === toCreate.length - 1) {
+                    await interaction.editReply({ content: `⚙️ ${created}/${toCreate.length} roles created...` });
                 }
-                await new Promise(r => setTimeout(r, 2000));
             }
             catch (e) {
                 failed.push(toCreate[i].name);

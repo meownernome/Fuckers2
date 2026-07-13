@@ -125,7 +125,7 @@ export class GtgCommand {
       return;
     }
 
-    await interaction.reply({ content: `📄 Found **${lines.length}** roles in file. Starting creation...`, flags: MessageFlags.Ephemeral });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const guild = interaction.guild!;
     await guild.roles.fetch();
@@ -148,17 +148,18 @@ export class GtgCommand {
       return;
     }
 
+    await interaction.editReply({ content: `⚙️ Creating ${toCreate.length} roles... (this may take a few minutes)` });
+
     let created = 0;
     const failed: string[] = [];
 
     for (let i = 0; i < toCreate.length; i++) {
       try {
-        await createRole(guild, toCreate[i].name, toCreate[i].color);
+        await guild.roles.create({ name: toCreate[i].name, color: toCreate[i].color, hoist: false, mentionable: false, reason: 'GTG bulk' });
         created++;
-        if ((i + 1) % 5 === 0 || i === toCreate.length - 1) {
-          await interaction.editReply({ content: `⚙️ Creating... ${i + 1}/${toCreate.length} (${created} done)` });
+        if (created % 10 === 0 || i === toCreate.length - 1) {
+          await interaction.editReply({ content: `⚙️ ${created}/${toCreate.length} roles created...` });
         }
-        await new Promise(r => setTimeout(r, 2000));
       } catch (e: any) {
         failed.push(toCreate[i].name);
       }

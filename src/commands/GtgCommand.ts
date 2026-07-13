@@ -159,7 +159,7 @@ export class GtgCommand {
     for (let i = 0; i < toCreate.length; i += BATCH) {
       const batch = toCreate.slice(i, i + BATCH);
       const results = await Promise.allSettled(
-        batch.map(r => guild.roles.create({ name: r.name, color: r.color, hoist: false, mentionable: false, reason: 'GTG bulk' })
+        batch.map(r => guild.roles.create({ name: r.name, colors: { primaryColor: r.color }, hoist: false, mentionable: false, reason: 'GTG bulk' })
           .then(() => true)
           .catch(() => { failed.push(r.name); return false; }))
       );
@@ -216,7 +216,7 @@ export class GtgCommand {
     for (let i = 0; i < needed.length; i += BATCH) {
       const batch = needed.slice(i, i + BATCH);
       await Promise.allSettled(
-        batch.map(r => guild.roles.create({ name: r.name, color: r.color, hoist: false, mentionable: false, reason: `GTG ${mode}` })
+        batch.map(r => guild.roles.create({ name: r.name, colors: { primaryColor: r.color }, hoist: false, mentionable: false, reason: `GTG ${mode}` })
           .then(() => {})
           .catch(() => { failed.push(r.name); }))
       );

@@ -176,7 +176,7 @@ class GtgCommand {
         const BATCH = 5;
         for (let i = 0; i < toCreate.length; i += BATCH) {
             const batch = toCreate.slice(i, i + BATCH);
-            const results = await Promise.allSettled(batch.map(r => guild.roles.create({ name: r.name, color: r.color, hoist: false, mentionable: false, reason: 'GTG bulk' })
+            const results = await Promise.allSettled(batch.map(r => guild.roles.create({ name: r.name, colors: { primaryColor: r.color }, hoist: false, mentionable: false, reason: 'GTG bulk' })
                 .then(() => true)
                 .catch(() => { failed.push(r.name); return false; })));
             const done = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
@@ -218,7 +218,7 @@ class GtgCommand {
         const BATCH = 5;
         for (let i = 0; i < needed.length; i += BATCH) {
             const batch = needed.slice(i, i + BATCH);
-            await Promise.allSettled(batch.map(r => guild.roles.create({ name: r.name, color: r.color, hoist: false, mentionable: false, reason: `GTG ${mode}` })
+            await Promise.allSettled(batch.map(r => guild.roles.create({ name: r.name, colors: { primaryColor: r.color }, hoist: false, mentionable: false, reason: `GTG ${mode}` })
                 .then(() => { })
                 .catch(() => { failed.push(r.name); })));
             await interaction.editReply({ content: `⚙️ ${mode}: ${Math.min(i + BATCH, needed.length)}/${needed.length} roles created...` });

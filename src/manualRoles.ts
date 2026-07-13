@@ -68,6 +68,16 @@ const STAFF_ROLES = [
   '🤖 ━━ Bot',
 ];
 
+function normalizeRoleName(name: string): string {
+  return name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 function parseRolesFromFile(): ManualRole[] {
   const filePath = path.join(__dirname, 'allRoles.txt');
   if (!fs.existsSync(filePath)) return [];
@@ -93,8 +103,10 @@ function parseRolesFromFile(): ManualRole[] {
   return roles;
 }
 
-export const MANUAL_ROLES: ManualRole[] = parseRolesFromFile().length > 0
-  ? parseRolesFromFile()
+const parsedRoles = parseRolesFromFile();
+
+export const MANUAL_ROLES: ManualRole[] = parsedRoles.length > 0
+  ? parsedRoles
   : [
       ...MODES.flatMap(mode => TIERS.map(tier => ({
         name: `${mode} ${tier}`,
@@ -104,8 +116,8 @@ export const MANUAL_ROLES: ManualRole[] = parseRolesFromFile().length > 0
     ];
 
 export function getManualRoleByName(name: string): ManualRole | undefined {
-  const normalized = name.trim().toLowerCase();
-  return MANUAL_ROLES.find(role => role.name.toLowerCase() === normalized);
+  const normalized = normalizeRoleName(name);
+  return MANUAL_ROLES.find(role => normalizeRoleName(role.name) === normalized);
 }
 
 export function getManualRoleNames(): string[] {

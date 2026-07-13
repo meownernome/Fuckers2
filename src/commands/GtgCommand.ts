@@ -22,9 +22,18 @@ export class GtgCommand {
 
     if (subcommand === 'bulk') {
       const created: string[] = [];
+      const skipped: string[] = [];
       const failed: string[] = [];
 
+      await interaction.guild?.roles.fetch();
+
       for (const manualRole of MANUAL_ROLES) {
+        const existingRole = interaction.guild?.roles.cache.find(role => role.name.toLowerCase() === manualRole.name.toLowerCase());
+        if (existingRole) {
+          skipped.push(manualRole.name);
+          continue;
+        }
+
         try {
           await createRole(interaction.guild!, manualRole.name, manualRole.color);
           created.push(manualRole.name);
@@ -33,7 +42,9 @@ export class GtgCommand {
         }
       }
 
-      await interaction.editReply({ content: `✅ Created ${created.length} roles. ${failed.length > 0 ? `⚠️ Failed: ${failed.length}` : ''}` });
+      await interaction.editReply({
+        content: `✅ Created ${created.length} roles. Skipped ${skipped.length} existing roles. ${failed.length > 0 ? `⚠️ Failed: ${failed.length}` : ''}`,
+      });
       return;
     }
 

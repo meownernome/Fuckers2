@@ -1,49 +1,49 @@
 # Format: RoleName ColorHex
-# Example: Sword 0x7F8C8D
-Sword 0x7F8C8D
-Crystal 0x95A5A6
-SMP 0x27AE60
-Netherite Pot 0x2ECC71
-Diamond Pot 0x2980B9
-UHC 0x8E44AD
-BuildUHC 0x9B59B6
-NoDebuff 0xD4AC0D
-Combo 0xF1C40F
-Gapple 0xE67E22
-OP Duel 0x34495E
-Boxing 0x1ABC9C
-Axe 0x16A085
-Mace 0x27AE60
-Anchor 0x8E44AD
-Cart PvP 0x3498DB
-Bedwars 0xE74C3C
-Skywars 0x9B59B6
-Bridge 0xF39C12
-Nodebuff 0xC0392B
-Vanilla 0x2ECC71
-Crossbow 0x7D6608
-Trident 0x2874A6
-Shield 0x1F618D
-Elytra Combat 0x7DCEA0
-Custom Duel 0xAF7AC5
-👑 ━━ Founder 0x000000
-👑 ━━ Co-Founder 0x000000
-⚡ ━━ Lead Developer 0x000000
-⚡ ━━ Developer 0x000000
-🌐 ━━ Network Manager 0x000000
-🛡️ ━━ Head Administrator 0x000000
-🛡️ ━━ Administrator 0x000000
-🔰 ━━ Senior Moderator 0x000000
-🔰 ━━ Moderator 0x000000
-🔰 ━━ Trial Moderator 0x000000
-⚔️ ━━ Head Tier Tester 0x000000
-⚔️ ━━ Senior Tier Tester 0x000000
-⚔️ ━━ Tier Tester 0x000000
-⚔️ ━━ Trial Tier Tester 0x000000
-💎 ━━ Support Team 0x000000
-🔨 ━━ Builder 0x000000
-🎬 ━━ Media Team 0x000000
-✅ ━━ Verified 0x000000
-👤 ━━ Member 0x000000
-🔇 ━━ Muted 0x000000
-🤖 ━━ Bot 0x000000
+# Example: ⚔️ Sword 0x7F8C8D
+⚔️ Sword 0x7F8C8D
+💎 Crystal 0x95A5A6
+🌾 SMP 0x27AE60
+🧪 Netherite Pot 0x2ECC71
+💧 Diamond Pot 0x2980B9
+🏹 UHC 0x8E44AD
+🧱 BuildUHC 0x9B59B6
+🛡️ NoDebuff 0xD4AC0D
+⚡ Combo 0xF1C40F
+🍎 Gapple 0xE67E22
+⚔️ OP Duel 0x34495E
+🥊 Boxing 0x1ABC9C
+🪓 Axe 0x16A085
+🦴 Mace 0x27AE60
+⚓ Anchor 0x8E44AD
+🏹 Cart PvP 0x3498DB
+🛏️ Bedwars 0xE74C3C
+☁️ Skywars 0x9B59B6
+🌉 Bridge 0xF39C12
+🧊 Nodebuff 0xC0392B
+🌿 Vanilla 0x2ECC71
+🏹 Crossbow 0x7D6608
+🔱 Trident 0x2874A6
+🛡️ Shield 0x1F618D
+🪶 Elytra Combat 0x7DCEA0
+🎯 Custom Duel 0xAF7AC5
+👑 Founder 0xFFD700
+👑 Co-Founder 0xC0C0C0
+⚡ Lead Developer 0xFF4500
+⚡ Developer 0x4169E1
+🌐 Network Manager 0x00BFFF
+🛡️ Head Administrator 0x8B0000
+🛡️ Administrator 0xFF8C00
+🔰 Senior Moderator 0x800080
+🔰 Moderator 0x4B0082
+🔰 Trial Moderator 0x6A5ACD
+⚔️ Head Tier Tester 0x228B22
+⚔️ Senior Tier Tester 0x2E8B57
+⚔️ Tier Tester 0x32CD32
+⚔️ Trial Tier Tester 0x7CFC00
+💎 Support Team 0x00CED1
+🔨 Builder 0xA0522D
+🎬 Media Team 0xFF69B4
+✅ Verified 0x32CD32
+👤 Member 0x808080
+🔇 Muted 0x2F4F4F
+🤖 Bot 0x1E90FF

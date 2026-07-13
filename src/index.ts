@@ -45,8 +45,6 @@ const TIERS = [
   { prefix: 'HT', level: 3, name: 'HT 3', color: 0x3498DB },
   { prefix: 'LT', level: 4, name: 'LT 4', color: 0x8E44AD },
   { prefix: 'HT', level: 4, name: 'HT 4', color: 0x9B59B6 },
-  { prefix: 'LT', level: 5, name: 'LT 5', color: 0xD4AC0D },
-  { prefix: 'HT', level: 5, name: 'HT 5', color: 0xF1C40F },
 ];
 
 async function logToChannel(guild: any, key: string, embed: EmbedBuilder) {
@@ -155,6 +153,23 @@ async function handleButton(interaction: any) {
 
   if (id.startsWith('gtg_create_')) return GtgCommand.handleButton(interaction);
   if (id.startsWith('gtg_skip_')) return GtgCommand.handleSkip(interaction);
+
+  if (id === 'cleanup_confirm') {
+    await interaction.deferUpdate();
+    const setup = new ServerSetup(interaction.client, interaction.guild);
+    const result = await setup.cleanup();
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Nuclear Cleanup Complete')
+      .setDescription(`**Deleted:** ${result.channels} channels, ${result.roles} roles`)
+      .setColor(0x2ECC71).setTimestamp();
+    await interaction.editReply({ embeds: [embed] as any, components: [] });
+    return;
+  }
+
+  if (id === 'cleanup_cancel') {
+    await interaction.update({ content: '❌ Cleanup cancelled.', embeds: [], components: [] });
+    return;
+  }
 
   if (id === 'verify_button') {
     const modal = new ModalBuilder().setCustomId('verify_modal').setTitle('✅ Verify Your Account');

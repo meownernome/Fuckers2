@@ -34,12 +34,12 @@ import { GtgCommand } from './commands/GtgCommand.js';
 import { RolesCommand } from './commands/RolesCommand.js';
 import { VerifyCommands, SetupVerifyCommand } from './commands/VerifyCommands.js';
 import { PermissionsCommand } from './commands/PermissionsCommand.js';
-import { IpCommand } from './commands/IpCommand.js';
+import { IpCommand } from './commands/IPCommand.js';
 import { PingCommand } from './commands/PingCommand.js';
 import { ProfileCommand } from './commands/ProfileCommand.js';
 import { LeaderboardCommand } from './commands/LeaderboardCommand.js';
 import { RulesCommand } from './commands/RulesCommand.js';
-import { FaqCommand } from './commands/FaqCommand.js';
+import { FaqCommand } from './commands/FAQCommand.js';
 
 const TOKEN = (process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN)!;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID!;

@@ -25,7 +25,7 @@ export class RulesCommand {
       rulesContent += `${rule}\n`;
     }
 
-    await interaction.reply({ content: rulesContent, ephemeral: true });
+    await interaction.reply({ content: rulesContent, flags: MessageFlags.Ephemeral });
   }
 
   public get command() {

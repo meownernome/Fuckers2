@@ -40,27 +40,20 @@ class GtgCommand {
             .setTitle('\u300C \u2726 ＧＴＧ \u2726 \u300D')
             .setDescription(`**Next role:** ${roles_1.ALL_ROLES[startIdx].name}\n**Remaining:** ${remaining}/${roles_1.ALL_ROLES.length}\n\nClick the button to create this role.`)
             .setColor(0x3498DB)
-            .setFooter({ text: '\u2726 Staff role creation \u2726' })
+            .setFooter({ text: '\u2726 Role creation \u2726' })
             .setTimestamp();
         const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next Role').setStyle(discord_js_1.ButtonStyle.Success).setEmoji('⚔️'));
         await interaction.reply({ embeds: [embed], components: [row], flags: discord_js_1.MessageFlags.Ephemeral });
     }
-    static async handleButton(interaction) {
-        if (!interaction.customId.startsWith('gtg_create_'))
-            return;
-        if (!isStaff(interaction.member)) {
-            await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
-            return;
-        }
-        const stateKey = interaction.customId.replace('gtg_create_', '');
+    static async process(interaction, stateKey) {
         const state = gtgState.get(stateKey);
         if (!state) {
-            await interaction.reply({ content: '❌ Session expired. Run /gtg again.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.editReply({ content: '❌ Session expired. Run /gtg again.', components: [] });
             return;
         }
         const guild = interaction.guild;
         if (guild.id !== state.guildId) {
-            await interaction.reply({ content: '❌ Wrong server.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.editReply({ content: '❌ Wrong server.', components: [] });
             return;
         }
         await guild.roles.fetch();
@@ -70,12 +63,11 @@ class GtgCommand {
                 .setTitle('✅ All Done!')
                 .setDescription(`All ${roles_1.ALL_ROLES.length} roles have been created.`)
                 .setColor(0x2ECC71);
-            await interaction.update({ embeds: [embed], components: [] });
+            await interaction.editReply({ embeds: [embed], components: [] });
             gtgState.delete(stateKey);
             return;
         }
         const role = roles_1.ALL_ROLES[idx];
-        await interaction.deferUpdate();
         try {
             await (0, roleCreator_1.createRole)(guild, role.name, role.color);
         }
@@ -106,26 +98,35 @@ class GtgCommand {
             .setTitle('\u300C \u2726 ＧＴＧ \u2726 \u300D')
             .setDescription(`✅ Created **${role.name}**\n\n**Next role:** ${next.name}\n**Remaining:** ${remaining}/${roles_1.ALL_ROLES.length}`)
             .setColor(0x3498DB)
-            .setFooter({ text: '\u2726 Staff role creation \u2726' })
+            .setFooter({ text: '\u2726 Role creation \u2726' })
             .setTimestamp();
         const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next Role').setStyle(discord_js_1.ButtonStyle.Success).setEmoji('⚔️'));
         await interaction.editReply({ embeds: [embed], components: [row] });
     }
+    static async handleButton(interaction) {
+        if (!interaction.customId.startsWith('gtg_create_'))
+            return;
+        await interaction.deferUpdate();
+        if (!isStaff(interaction.member)) {
+            await interaction.editReply({ content: '❌ Staff only.', components: [] });
+            return;
+        }
+        const stateKey = interaction.customId.replace('gtg_create_', '');
+        await GtgCommand.process(interaction, stateKey);
+    }
     static async handleSkip(interaction) {
         if (!interaction.customId.startsWith('gtg_skip_'))
             return;
+        await interaction.deferUpdate();
         if (!isStaff(interaction.member)) {
-            await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.editReply({ content: '❌ Staff only.', components: [] });
             return;
         }
         const stateKey = interaction.customId.replace('gtg_skip_', '');
         const state = gtgState.get(stateKey);
-        if (!state) {
-            await interaction.reply({ content: '❌ Session expired.', flags: discord_js_1.MessageFlags.Ephemeral });
-            return;
-        }
-        state.idx++;
-        await this.handleButton(interaction);
+        if (state)
+            state.idx++;
+        await GtgCommand.process(interaction, stateKey);
     }
     get command() {
         return new discord_js_1.SlashCommandBuilder()

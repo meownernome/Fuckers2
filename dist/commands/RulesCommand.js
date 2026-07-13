@@ -25,7 +25,7 @@ class RulesCommand {
         for (const rule of rules) {
             rulesContent += `${rule}\n`;
         }
-        await interaction.reply({ content: rulesContent, ephemeral: true });
+        await interaction.reply({ content: rulesContent, flags: discord_js_1.MessageFlags.Ephemeral });
     }
     get command() {
         return new discord_js_1.SlashCommandBuilder()

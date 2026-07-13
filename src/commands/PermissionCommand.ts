@@ -19,7 +19,7 @@ const CATEGORY_PERMS: Record<string, { everyone: boolean; note: string }> = {
 
 export class PermissionCommand {
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const guild = interaction.guild!;
     let updated = 0;

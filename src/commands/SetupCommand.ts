@@ -3,7 +3,7 @@ import { ServerSetup } from '../ServerSetup';
 
 export class SetupCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const serverSetup = new ServerSetup(interaction.client, interaction.guild!);
     await serverSetup.setupContent();

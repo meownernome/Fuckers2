@@ -5,7 +5,7 @@ const discord_js_1 = require("discord.js");
 class PingCommand {
     async execute(interaction) {
         const latency = Date.now() - interaction.createdTimestamp;
-        await interaction.reply({ content: `🏓 Pong! Latency: ${latency}ms`, ephemeral: true });
+        await interaction.reply({ content: `🏓 Pong! Latency: ${latency}ms`, flags: discord_js_1.MessageFlags.Ephemeral });
     }
     get command() {
         return new discord_js_1.SlashCommandBuilder()

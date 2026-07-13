@@ -11,7 +11,7 @@ class IPCommand {
             .addFields({ name: 'Status', value: '🟢 Online', inline: true }, { name: 'Type', value: 'PvP Tier Testing', inline: true }, { name: 'Modes', value: '15+ PvP modes available', inline: true })
             .setFooter({ text: 'Join us for PvP tier testing!' })
             .setTimestamp();
-        await interaction.reply({ content: embed.toString(), ephemeral: true });
+        await interaction.reply({ content: embed.toString(), flags: discord_js_1.MessageFlags.Ephemeral });
     }
     get command() {
         return new discord_js_1.SlashCommandBuilder()

@@ -4,7 +4,7 @@ exports.VerificationCommand = void 0;
 const discord_js_1 = require("discord.js");
 class VerificationCommand {
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const minecraftUsername = await this.getMinecraftUsernameFromUser(interaction.user.id);
         if (!minecraftUsername) {
             await interaction.editReply({

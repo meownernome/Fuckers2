@@ -5,7 +5,7 @@ const discord_js_1 = require("discord.js");
 const ServerSetup_1 = require("../ServerSetup");
 class AllCommand {
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         try {
             await new ServerSetup_1.ServerSetup(interaction.client, interaction.guild).setupAll();
             await interaction.editReply({ content: '✅ /all complete. Run `/setup` next.' });

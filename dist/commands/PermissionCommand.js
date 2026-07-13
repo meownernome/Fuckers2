@@ -18,7 +18,7 @@ const CATEGORY_PERMS = {
 };
 class PermissionCommand {
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const guild = interaction.guild;
         let updated = 0;
         let failed = 0;

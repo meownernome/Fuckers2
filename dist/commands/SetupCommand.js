@@ -5,7 +5,7 @@ const discord_js_1 = require("discord.js");
 const ServerSetup_1 = require("../ServerSetup");
 class SetupCommand {
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const serverSetup = new ServerSetup_1.ServerSetup(interaction.client, interaction.guild);
         await serverSetup.setupContent();
         await interaction.editReply({ content: '✅ Content panels posted! Welcome, rules, FAQ, verify button, tier test buttons, and leaderboards are now live.' });

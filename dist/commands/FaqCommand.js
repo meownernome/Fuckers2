@@ -34,7 +34,7 @@ class FAQCommand {
         for (const faq of faqs) {
             faqContent += `**${faq.question}**\n${faq.answer}\n\n`;
         }
-        await interaction.reply({ content: faqContent, ephemeral: true });
+        await interaction.reply({ content: faqContent, flags: discord_js_1.MessageFlags.Ephemeral });
     }
     get command() {
         return new discord_js_1.SlashCommandBuilder()

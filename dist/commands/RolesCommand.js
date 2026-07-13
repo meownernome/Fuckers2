@@ -8,7 +8,7 @@ const HT_REGEX = /\u{1D407}\u{1D413} [\u{1D7CE}-\u{1D7D7}]/u;
 class RolesCommand {
     async execute(interaction) {
         if (!interaction.memberPermissions?.has('ManageRoles')) {
-            await interaction.reply({ content: '❌ You need the Manage Roles permission.', ephemeral: true });
+            await interaction.reply({ content: '❌ You need the Manage Roles permission.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const roles = interaction.guild?.roles.cache
@@ -17,7 +17,7 @@ class RolesCommand {
         if (!roles || roles.size === 0) {
             await interaction.reply({
                 content: '❌ No roles found in this server.\n\n> Use **`/all`** to create the full role structure.\n> Or check if `/cleanup` deleted everything.',
-                ephemeral: true,
+                flags: discord_js_1.MessageFlags.Ephemeral,
             });
             return;
         }
@@ -59,7 +59,7 @@ class RolesCommand {
             });
         }
         embed.setFooter({ text: `✦ Total: ${roles.size} roles ✦` });
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], flags: discord_js_1.MessageFlags.Ephemeral });
     }
     get command() {
         return new discord_js_1.SlashCommandBuilder()

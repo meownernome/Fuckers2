@@ -66,19 +66,25 @@ class RoleCreator {
     async createRolesSequentially(roles) {
         const createdRoles = new Map();
         const existingRoles = await this.fetchExistingRoles();
+        let skipped = 0;
         for (const role of roles) {
             if (existingRoles.has(role.name)) {
-                Logger_js_1.Logger.debug(`Role already exists: ${role.name}`);
+                skipped++;
                 createdRoles.set(role.name, existingRoles.get(role.name));
                 continue;
             }
+            Logger_js_1.Logger.info(`Creating role ${skipped + createdRoles.size + 1}/${roles.length}: ${role.name}`);
             const roleId = await this.createRole(role);
             if (roleId) {
                 createdRoles.set(role.name, roleId);
                 existingRoles.set(role.name, roleId);
             }
+            else {
+                Logger_js_1.Logger.warn(`Failed to create role: ${role.name}`);
+            }
             await this.delay(REST_DELAY_MS);
         }
+        Logger_js_1.Logger.info(`Role creation complete: ${createdRoles.size - skipped} new, ${skipped} skipped`);
         return createdRoles;
     }
     async fetchExistingRoles() {

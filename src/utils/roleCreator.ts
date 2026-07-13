@@ -87,22 +87,27 @@ export class RoleCreator {
     const createdRoles = new Map<string, string>();
     const existingRoles = await this.fetchExistingRoles();
     
+    let skipped = 0;
     for (const role of roles) {
       if (existingRoles.has(role.name)) {
-        Logger.debug(`Role already exists: ${role.name}`);
+        skipped++;
         createdRoles.set(role.name, existingRoles.get(role.name)!);
         continue;
       }
 
+      Logger.info(`Creating role ${skipped + createdRoles.size + 1}/${roles.length}: ${role.name}`);
       const roleId = await this.createRole(role);
       if (roleId) {
         createdRoles.set(role.name, roleId);
         existingRoles.set(role.name, roleId);
+      } else {
+        Logger.warn(`Failed to create role: ${role.name}`);
       }
       
       await this.delay(REST_DELAY_MS);
     }
 
+    Logger.info(`Role creation complete: ${createdRoles.size - skipped} new, ${skipped} skipped`);
     return createdRoles;
   }
 

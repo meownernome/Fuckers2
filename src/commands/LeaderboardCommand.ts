@@ -16,7 +16,7 @@ export class LeaderboardCommand {
       .setFooter({ text: 'Leaderboards are updated regularly' })
       .setTimestamp();
 
-    await interaction.reply({ content: embed.toString(), flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: embed.toString(), ephemeral: true });
   }
 
   public get command() {

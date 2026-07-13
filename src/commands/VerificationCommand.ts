@@ -2,7 +2,7 @@ import { MessageFlags, SlashCommandBuilder, ChatInputCommandInteraction } from '
 
 export class VerificationCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
+    await interaction.deferReply({ ephemeral: true });
 
     const minecraftUsername = await this.getMinecraftUsernameFromUser(interaction.user.id);
     if (!minecraftUsername) {

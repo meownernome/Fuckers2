@@ -115,15 +115,15 @@ async function handleButton(interaction) {
         const channelId = id.replace('ticket_claim_', '');
         const state = TICKET_STATE.get(channelId);
         if (!state) {
-            await interaction.reply({ content: '❌ Ticket expired.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true });
             return;
         }
         if (state.claimedBy) {
-            await interaction.reply({ content: `❌ Already claimed by ${state.claimedByName}.`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: `❌ Already claimed by ${state.claimedByName}.`, ephemeral: true });
             return;
         }
         if (state.playerId === interaction.user.id) {
-            await interaction.reply({ content: '❌ Cannot claim own ticket.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Cannot claim own ticket.', ephemeral: true });
             return;
         }
         state.claimedBy = interaction.user.id;
@@ -147,7 +147,7 @@ async function handleButton(interaction) {
         const channelId = id.replace('ticket_start_', '');
         const state = TICKET_STATE.get(channelId);
         if (!state) {
-            await interaction.reply({ content: '❌ Ticket expired.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true });
             return;
         }
         await interaction.reply({ content: `🌐 **Server IP:** \`play.harvalmc.fun\`\n⚔️ **Mode:** ${state.mode}\n\n<@${state.playerId}> please join.` });
@@ -156,7 +156,7 @@ async function handleButton(interaction) {
     if (id.startsWith('ticket_givetier_')) {
         const channelId = id.replace('ticket_givetier_', '');
         if (!TICKET_STATE.get(channelId)) {
-            await interaction.reply({ content: '❌ Ticket expired.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true });
             return;
         }
         const modal = new discord_js_1.ModalBuilder().setCustomId(`tier_result_${channelId}`).setTitle('Assign Tier');
@@ -186,7 +186,7 @@ async function handleModal(interaction) {
             }
             catch { }
         }
-        await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, flags: discord_js_1.MessageFlags.Ephemeral });
+        await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, ephemeral: true });
         return;
     }
     if (id === 'support_ticket_modal') {
@@ -202,7 +202,7 @@ async function handleModal(interaction) {
             ],
         });
         await ch.send({ content: `🎫 Support ticket — <@${interaction.user.id}>\n**Subject:** ${subject}\n${desc}` });
-        await interaction.reply({ content: `✅ Ticket created: <#${ch.id}>`, flags: discord_js_1.MessageFlags.Ephemeral });
+        await interaction.reply({ content: `✅ Ticket created: <#${ch.id}>`, ephemeral: true });
         return;
     }
     if (id === 'tier_test_request') {
@@ -210,14 +210,14 @@ async function handleModal(interaction) {
         const ign = interaction.fields.getTextInputValue('ign').trim();
         const match = MODES.find(m => m.toLowerCase() === mode.toLowerCase());
         if (!match) {
-            await interaction.reply({ content: `❌ Invalid mode. Options: ${MODES.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: `❌ Invalid mode. Options: ${MODES.join(', ')}`, ephemeral: true });
             return;
         }
         const ticket = await new ServerSetup_1.ServerSetup(interaction.client, interaction.guild).createTicket(match, {
             id: interaction.user.id, username: interaction.user.username, displayName: interaction.member.displayName || interaction.user.username,
         });
         if (!ticket) {
-            await interaction.reply({ content: '❌ No tickets category found.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ No tickets category found.', ephemeral: true });
             return;
         }
         const emoji = MODE_EMOJI[match] || '🎮';
@@ -228,26 +228,26 @@ async function handleModal(interaction) {
             .setColor(0xF1C40F).setFooter({ text: 'TIER TEST TICKET' }).setTimestamp();
         const claimRow = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId(`ticket_claim_${ticket.id}`).setLabel('Claim Ticket').setEmoji('⚔️').setStyle(discord_js_1.ButtonStyle.Primary));
         await ticket.send({ embeds: [embed], components: [claimRow], content: `<@${interaction.user.id}>` });
-        await interaction.reply({ content: `✅ ${match} ticket ready: <#${ticket.id}>`, flags: discord_js_1.MessageFlags.Ephemeral });
+        await interaction.reply({ content: `✅ ${match} ticket ready: <#${ticket.id}>`, ephemeral: true });
         return;
     }
     if (id.startsWith('tier_result_')) {
         const channelId = id.replace('tier_result_', '');
         const state = TICKET_STATE.get(channelId);
         if (!state) {
-            await interaction.reply({ content: '❌ Ticket expired.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true });
             return;
         }
         const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase();
         const tierMatch = TIERS.find(t => t.name.toUpperCase() === tierInput);
         if (!tierMatch) {
-            await interaction.reply({ content: '❌ Invalid tier. Use LT 1-5 or HT 1-5.', flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Invalid tier. Use LT 1-5 or HT 1-5.', ephemeral: true });
             return;
         }
         const roleName = `${state.mode} ${tierMatch.name}`;
         const role = interaction.guild.roles.cache.find((r) => r.name === roleName);
         if (!role) {
-            await interaction.reply({ content: `❌ Role ${roleName} not found. Run /makeroles first.`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: `❌ Role ${roleName} not found. Run /makeroles first.`, ephemeral: true });
             return;
         }
         try {
@@ -257,7 +257,7 @@ async function handleModal(interaction) {
             await interaction.channel.send({ content: `🏆 <@${state.playerId}> — Ranked **${roleName}**!` });
         }
         catch (e) {
-            await interaction.reply({ content: `❌ Failed: ${e.message}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: `❌ Failed: ${e.message}`, ephemeral: true });
         }
         return;
     }
@@ -269,7 +269,7 @@ async function handleModal(interaction) {
         if (appCh) {
             await appCh.send({ embeds: [new discord_js_1.EmbedBuilder().setTitle('Staff Application').addFields({ name: 'Applicant', value: `<@${interaction.user.id}>`, inline: true }, { name: 'Age', value: age, inline: true }, { name: 'Experience', value: exp }, { name: 'Why', value: why }).setColor(0x9B59B6).setTimestamp()] });
         }
-        await interaction.reply({ content: '✅ Application submitted!', flags: discord_js_1.MessageFlags.Ephemeral });
+        await interaction.reply({ content: '✅ Application submitted!', ephemeral: true });
         return;
     }
     if (id === 'tester_application') {
@@ -280,7 +280,7 @@ async function handleModal(interaction) {
         if (appCh) {
             await appCh.send({ embeds: [new discord_js_1.EmbedBuilder().setTitle('Tester Application').addFields({ name: 'Applicant', value: `<@${interaction.user.id}>`, inline: true }, { name: 'IGN', value: ign, inline: true }, { name: 'PvP Experience', value: pvp }, { name: 'Why', value: why }).setColor(0xE67E22).setTimestamp()] });
         }
-        await interaction.reply({ content: '✅ Application submitted!', flags: discord_js_1.MessageFlags.Ephemeral });
+        await interaction.reply({ content: '✅ Application submitted!', ephemeral: true });
         return;
     }
 }

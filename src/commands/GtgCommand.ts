@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
-import { MANUAL_ROLES, getManualRoleByName } from '../manualRoles';
+import { MANUAL_ROLES, getManualRoleByName, getManualRoleNames } from '../manualRoles';
 import { createRole } from '../utils/roleCreator';
 
 export class GtgCommand {
@@ -15,8 +15,25 @@ export class GtgCommand {
     }
 
     if (subcommand === 'list') {
-      const names = MANUAL_ROLES.map(r => r.name).join('\n');
+      const names = getManualRoleNames().join('\n');
       await interaction.editReply({ content: `📋 Available roles:\n\n${names}` });
+      return;
+    }
+
+    if (subcommand === 'bulk') {
+      const created: string[] = [];
+      const failed: string[] = [];
+
+      for (const manualRole of MANUAL_ROLES) {
+        try {
+          await createRole(interaction.guild!, manualRole.name, manualRole.color);
+          created.push(manualRole.name);
+        } catch (e: any) {
+          failed.push(`${manualRole.name}: ${e?.message || 'Unknown error'}`);
+        }
+      }
+
+      await interaction.editReply({ content: `✅ Created ${created.length} roles. ${failed.length > 0 ? `⚠️ Failed: ${failed.length}` : ''}` });
       return;
     }
 
@@ -45,6 +62,7 @@ export class GtgCommand {
       .setDescription('Create roles from the manual role list')
       .addSubcommand(sub => sub.setName('create').setDescription('Create one role').addStringOption(option => option.setName('role').setDescription('Role name').setRequired(true)))
       .addSubcommand(sub => sub.setName('list').setDescription('List all available roles'))
+      .addSubcommand(sub => sub.setName('bulk').setDescription('Create every role from the manual list'))
       .setDMPermission(false);
   }
 }

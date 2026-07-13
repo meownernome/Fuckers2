@@ -3,7 +3,7 @@ import { ServerSetup } from '../ServerSetup';
 
 export class AllCommand {
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
+    await interaction.deferReply({ ephemeral: true });
     try {
       await new ServerSetup(interaction.client, interaction.guild!).setupAll();
       await interaction.editReply({ content: '✅ /all complete. Run `/setup` next.' });

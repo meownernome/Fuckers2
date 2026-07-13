@@ -14,7 +14,7 @@ export class IPCommand {
       .setFooter({ text: 'Join us for PvP tier testing!' })
       .setTimestamp();
 
-    await interaction.reply({ content: embed.toString(), flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: embed.toString(), ephemeral: true });
   }
 
   public get command() {

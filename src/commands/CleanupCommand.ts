@@ -4,11 +4,11 @@ import { ServerSetup } from '../ServerSetup';
 export class CleanupCommand {
   public async execute(interaction: any): Promise<void> {
     if (interaction.user.id !== interaction.guild?.ownerId) {
-      await interaction.reply({ content: '❌ Only the server owner can use this command.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: '❌ Only the server owner can use this command.', ephemeral: true });
       return;
     }
 
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral } as any);
+    await interaction.deferReply({ ephemeral: true });
 
     const serverSetup = new ServerSetup(interaction.client, interaction.guild);
     const result = await serverSetup.cleanup();

@@ -43,14 +43,18 @@ const TIERS = [
   { prefix: 'HT', level: 5, name: 'HT 5', color: 0xF1C40F },
 ];
 
-client.once(Events.ClientReady, async () => {
-  console.log(`✅ Logged in as ${client.user!.tag}`);
+async function registerCommands() {
   for (const guild of client.guilds.cache.values()) {
     try {
       await guild.commands.set(commands.map(c => c.command.toJSON()));
-      console.log(`  📋 Registered ${commands.length} commands in ${guild.name}`);
-    } catch (e: any) { console.error(`  ❌ Guild reg fail: ${e.message}`); }
+      console.log(`📋 Registered ${commands.length} commands in ${guild.name}`);
+    } catch (e: any) { console.error(`❌ Guild reg fail: ${e.message}`); }
   }
+}
+
+client.once(Events.ClientReady, async () => {
+  console.log(`✅ Logged in as ${client.user!.tag}`);
+  await registerCommands();
   console.log(`Total commands: ${commands.length}`);
 });
 
@@ -59,6 +63,10 @@ client.on(Events.GuildCreate, async (guild) => {
     await guild.commands.set(commands.map(c => c.command.toJSON()));
     console.log(`📋 Registered commands in new guild: ${guild.name}`);
   } catch (e: any) { console.error(`❌ Guild reg fail: ${e.message}`); }
+});
+
+client.on(Events.GuildUpdate, async () => {
+  await registerCommands();
 });
 
 client.on(Events.InteractionCreate, async (interaction: any) => {
@@ -130,9 +138,9 @@ async function handleButton(interaction: any) {
   if (id.startsWith('ticket_claim_')) {
     const channelId = id.replace('ticket_claim_', '');
     const state = TICKET_STATE.get(channelId);
-    if (!state) { await interaction.reply({ content: '❌ Ticket expired.', flags: MessageFlags.Ephemeral }); return; }
-    if (state.claimedBy) { await interaction.reply({ content: `❌ Already claimed by ${state.claimedByName}.`, flags: MessageFlags.Ephemeral }); return; }
-    if (state.playerId === interaction.user.id) { await interaction.reply({ content: '❌ Cannot claim own ticket.', flags: MessageFlags.Ephemeral }); return; }
+    if (!state) { await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true }); return; }
+    if (state.claimedBy) { await interaction.reply({ content: `❌ Already claimed by ${state.claimedByName}.`, ephemeral: true }); return; }
+    if (state.playerId === interaction.user.id) { await interaction.reply({ content: '❌ Cannot claim own ticket.', ephemeral: true }); return; }
 
     state.claimedBy = interaction.user.id;
     state.claimedByName = interaction.member.displayName || interaction.user.username;
@@ -162,14 +170,14 @@ async function handleButton(interaction: any) {
   if (id.startsWith('ticket_start_')) {
     const channelId = id.replace('ticket_start_', '');
     const state = TICKET_STATE.get(channelId);
-    if (!state) { await interaction.reply({ content: '❌ Ticket expired.', flags: MessageFlags.Ephemeral }); return; }
+    if (!state) { await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true }); return; }
     await interaction.reply({ content: `🌐 **Server IP:** \`play.harvalmc.fun\`\n⚔️ **Mode:** ${state.mode}\n\n<@${state.playerId}> please join.` });
     return;
   }
 
   if (id.startsWith('ticket_givetier_')) {
     const channelId = id.replace('ticket_givetier_', '');
-    if (!TICKET_STATE.get(channelId)) { await interaction.reply({ content: '❌ Ticket expired.', flags: MessageFlags.Ephemeral }); return; }
+    if (!TICKET_STATE.get(channelId)) { await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true }); return; }
     const modal = new ModalBuilder().setCustomId(`tier_result_${channelId}`).setTitle('Assign Tier');
     modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(
       new TextInputBuilder().setCustomId('tier').setLabel('Tier (LT 1-5 / HT 1-5)').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('e.g. HT 3'),
@@ -194,7 +202,7 @@ async function handleModal(interaction: any) {
     const ign = interaction.fields.getTextInputValue('ign');
     const verifyRole = interaction.guild.roles.cache.find((r: any) => r.name === '✅ ━━ Verified');
     if (verifyRole) { try { await interaction.member.roles.add(verifyRole); } catch {} }
-    await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, ephemeral: true });
     return;
   }
 
@@ -211,7 +219,7 @@ async function handleModal(interaction: any) {
       ],
     });
     await ch.send({ content: `🎫 Support ticket — <@${interaction.user.id}>\n**Subject:** ${subject}\n${desc}` });
-    await interaction.reply({ content: `✅ Ticket created: <#${ch.id}>`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `✅ Ticket created: <#${ch.id}>`, ephemeral: true });
     return;
   }
 
@@ -219,12 +227,12 @@ async function handleModal(interaction: any) {
     const mode = interaction.fields.getTextInputValue('mode').trim();
     const ign = interaction.fields.getTextInputValue('ign').trim();
     const match = MODES.find(m => m.toLowerCase() === mode.toLowerCase());
-    if (!match) { await interaction.reply({ content: `❌ Invalid mode. Options: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral }); return; }
+    if (!match) { await interaction.reply({ content: `❌ Invalid mode. Options: ${MODES.join(', ')}`, ephemeral: true }); return; }
 
     const ticket = await new ServerSetup(interaction.client, interaction.guild).createTicket(match, {
       id: interaction.user.id, username: interaction.user.username, displayName: interaction.member.displayName || interaction.user.username,
     });
-    if (!ticket) { await interaction.reply({ content: '❌ No tickets category found.', flags: MessageFlags.Ephemeral }); return; }
+    if (!ticket) { await interaction.reply({ content: '❌ No tickets category found.', ephemeral: true }); return; }
 
     const emoji = MODE_EMOJI[match] || '🎮';
     TICKET_STATE.set(ticket.id, { channelId: ticket.id, mode: match, playerId: interaction.user.id, playerName: interaction.user.username, playerDisplay: ign });
@@ -237,27 +245,27 @@ async function handleModal(interaction: any) {
       new ButtonBuilder().setCustomId(`ticket_claim_${ticket.id}`).setLabel('Claim Ticket').setEmoji('⚔️').setStyle(ButtonStyle.Primary),
     );
     await ticket.send({ embeds: [embed] as any, components: [claimRow as any], content: `<@${interaction.user.id}>` });
-    await interaction.reply({ content: `✅ ${match} ticket ready: <#${ticket.id}>`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `✅ ${match} ticket ready: <#${ticket.id}>`, ephemeral: true });
     return;
   }
 
   if (id.startsWith('tier_result_')) {
     const channelId = id.replace('tier_result_', '');
     const state = TICKET_STATE.get(channelId);
-    if (!state) { await interaction.reply({ content: '❌ Ticket expired.', flags: MessageFlags.Ephemeral }); return; }
+    if (!state) { await interaction.reply({ content: '❌ Ticket expired.', ephemeral: true }); return; }
     const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase();
     const tierMatch = TIERS.find(t => t.name.toUpperCase() === tierInput);
-    if (!tierMatch) { await interaction.reply({ content: '❌ Invalid tier. Use LT 1-5 or HT 1-5.', flags: MessageFlags.Ephemeral }); return; }
+    if (!tierMatch) { await interaction.reply({ content: '❌ Invalid tier. Use LT 1-5 or HT 1-5.', ephemeral: true }); return; }
 
     const roleName = `${state.mode} ${tierMatch.name}`;
     const role = interaction.guild.roles.cache.find((r: any) => r.name === roleName);
-    if (!role) { await interaction.reply({ content: `❌ Role ${roleName} not found. Run /makeroles first.`, flags: MessageFlags.Ephemeral }); return; }
+    if (!role) { await interaction.reply({ content: `❌ Role ${roleName} not found. Run /makeroles first.`, ephemeral: true }); return; }
     try {
       const member = await interaction.guild.members.fetch(state.playerId);
       await member.roles.add(role);
       await interaction.reply({ content: `✅ **${state.playerDisplay}** → **${roleName}**` });
       await interaction.channel.send({ content: `🏆 <@${state.playerId}> — Ranked **${roleName}**!` });
-    } catch (e: any) { await interaction.reply({ content: `❌ Failed: ${e.message}`, flags: MessageFlags.Ephemeral }); }
+    } catch (e: any) { await interaction.reply({ content: `❌ Failed: ${e.message}`, ephemeral: true }); }
     return;
   }
 
@@ -274,7 +282,7 @@ async function handleModal(interaction: any) {
         { name: 'Why', value: why },
       ).setColor(0x9B59B6).setTimestamp()] as any });
     }
-    await interaction.reply({ content: '✅ Application submitted!', flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: '✅ Application submitted!', ephemeral: true });
     return;
   }
 
@@ -291,7 +299,7 @@ async function handleModal(interaction: any) {
         { name: 'Why', value: why },
       ).setColor(0xE67E22).setTimestamp()] as any });
     }
-    await interaction.reply({ content: '✅ Application submitted!', flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: '✅ Application submitted!', ephemeral: true });
     return;
   }
 }

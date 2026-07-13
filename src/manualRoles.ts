@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export interface ManualRole {
   name: string;
   color: number;
@@ -65,15 +68,46 @@ const STAFF_ROLES = [
   '🤖 ━━ Bot',
 ];
 
-export const MANUAL_ROLES: ManualRole[] = [
-  ...MODES.flatMap(mode => TIERS.map(tier => ({
-    name: `${mode} ${tier}`,
-    color: ROLE_COLORS[mode] ?? DEFAULT_COLOR,
-  }))),
-  ...STAFF_ROLES.map(name => ({ name, color: 0x000000 })),
-];
+function parseRolesFromFile(): ManualRole[] {
+  const filePath = path.join(__dirname, 'allRoles.txt');
+  if (!fs.existsSync(filePath)) return [];
+
+  const content = fs.readFileSync(filePath, 'utf8');
+  const roles: ManualRole[] = [];
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    const parts = line.split(/\s+/);
+    if (parts.length < 2) continue;
+
+    const colorToken = parts[parts.length - 1];
+    const nameParts = parts.slice(0, -1);
+    const name = nameParts.join(' ');
+
+    const color = parseInt(colorToken.replace(/^0x/i, ''), 16);
+    roles.push({ name, color: Number.isNaN(color) ? DEFAULT_COLOR : color });
+  }
+
+  return roles;
+}
+
+export const MANUAL_ROLES: ManualRole[] = parseRolesFromFile().length > 0
+  ? parseRolesFromFile()
+  : [
+      ...MODES.flatMap(mode => TIERS.map(tier => ({
+        name: `${mode} ${tier}`,
+        color: ROLE_COLORS[mode] ?? DEFAULT_COLOR,
+      }))),
+      ...STAFF_ROLES.map(name => ({ name, color: 0x000000 })),
+    ];
 
 export function getManualRoleByName(name: string): ManualRole | undefined {
   const normalized = name.trim().toLowerCase();
   return MANUAL_ROLES.find(role => role.name.toLowerCase() === normalized);
+}
+
+export function getManualRoleNames(): string[] {
+  return MANUAL_ROLES.map(role => role.name);
 }

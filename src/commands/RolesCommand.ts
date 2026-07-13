@@ -5,7 +5,7 @@ const STAFF_ROLE_PATTERNS = /^(👑|⚡|🌐|🛡️|🔰|⚔️|💎|🔨|🎬)
 export class RolesCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.memberPermissions?.has('ManageRoles')) {
-      await interaction.reply({ content: '❌ You need the Manage Roles permission.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: '❌ You need the Manage Roles permission.', ephemeral: true });
       return;
     }
 
@@ -16,7 +16,7 @@ export class RolesCommand {
     if (!roles || roles.size === 0) {
       await interaction.reply({
         content: '❌ No roles found in this server.\n\n> Use **`/all`** to create the full role structure.\n> Or check if `/cleanup` deleted everything.',
-        flags: MessageFlags.Ephemeral,
+        ephemeral: true,
       });
       return;
     }
@@ -63,7 +63,7 @@ export class RolesCommand {
 
     embed.setFooter({ text: `╚════ Total: ${roles.size} roles ════╝` });
 
-    await interaction.reply({ embeds: [embed] as any, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ embeds: [embed] as any, ephemeral: true });
   }
 
   public get command() {

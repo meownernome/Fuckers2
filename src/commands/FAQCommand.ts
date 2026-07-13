@@ -34,7 +34,7 @@ export class FAQCommand {
       faqContent += `**${faq.question}**\n${faq.answer}\n\n`;
     }
 
-    await interaction.reply({ content: faqContent, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: faqContent, ephemeral: true });
   }
 
   public get command() {

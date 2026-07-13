@@ -37,27 +37,27 @@ const GAME_MODES: { name: string; tiers: string[]; baseColor: number }[] = [
 ];
 
 const STAFF_ROLES: RoleConfig[] = [
-  { name: '👑 Founder', color: 0xFFD700, isStaff: true },
-  { name: '👑 Co-Founder', color: 0xFFD700, isStaff: true },
+  { name: '⋆ Founder ⋆', color: 0xFFD700, isStaff: true },
+  { name: '⋆ Co-Founder ⋆', color: 0xFFD700, isStaff: true },
   { name: '⚡ Lead Developer', color: 0x00FFFF, isStaff: true },
   { name: '⚡ Developer', color: 0x00FFFF, isStaff: true },
-  { name: '🌐 Network Manager', color: 0x00FF7F, isStaff: true },
-  { name: '🛡️ Head Administrator', color: 0xFF0000, isStaff: true },
-  { name: '🛡️ Administrator', color: 0xFF0000, isStaff: true },
-  { name: '🔰 Senior Moderator', color: 0xFFA500, isStaff: true },
-  { name: '🔰 Moderator', color: 0xFFA500, isStaff: true },
-  { name: '🔰 Trial Moderator', color: 0xFFA500, isStaff: true },
-  { name: '⚔️ Head Tier Tester', color: 0xFF4500, isStaff: true },
-  { name: '⚔️ Senior Tier Tester', color: 0xFF4500, isStaff: true },
-  { name: '⚔️ Tier Tester', color: 0xFF4500, isStaff: true },
-  { name: '⚔️ Trial Tier Tester', color: 0xFF4500, isStaff: true },
-  { name: '💎 Support Team', color: 0x9370DB, isStaff: true },
-  { name: '🔨 Builder', color: 0xDEB887, isStaff: true },
-  { name: '🎬 Media Team', color: 0xFF69B4, isStaff: true },
-  { name: '✅ Verified', color: 0x00FF00, isUtility: true },
-  { name: '👤 Member', color: 0x808080, isUtility: true },
-  { name: '🔇 Muted', color: 0x808080, isUtility: true },
-  { name: '🤖 Bot', color: 0x7289DA, isUtility: true },
+  { name: '◈ Network Manager', color: 0x00FF7F, isStaff: true },
+  { name: '◆ Head Administrator', color: 0xFF0000, isStaff: true },
+  { name: '◆ Administrator', color: 0xFF0000, isStaff: true },
+  { name: '▸ Senior Moderator', color: 0xFFA500, isStaff: true },
+  { name: '▸ Moderator', color: 0xFFA500, isStaff: true },
+  { name: '▸ Trial Moderator', color: 0xFFA500, isStaff: true },
+  { name: '⏣ Head Tier Tester', color: 0xFF4500, isStaff: true },
+  { name: '⏣ Senior Tier Tester', color: 0xFF4500, isStaff: true },
+  { name: '⏣ Tier Tester', color: 0xFF4500, isStaff: true },
+  { name: '⏣ Trial Tier Tester', color: 0xFF4500, isStaff: true },
+  { name: '○ Support Team', color: 0x9370DB, isStaff: true },
+  { name: '◇ Builder', color: 0xDEB887, isStaff: true },
+  { name: '◇ Media Team', color: 0xFF69B4, isStaff: true },
+  { name: '[✓] Verified', color: 0x00FF00, isUtility: true },
+  { name: '[●] Member', color: 0x808080, isUtility: true },
+  { name: '[✕] Muted', color: 0x808080, isUtility: true },
+  { name: '[◈] Bot', color: 0x7289DA, isUtility: true },
 ];
 
 export const ALL_ROLES: RoleConfig[] = [];
@@ -68,7 +68,7 @@ for (const mode of GAME_MODES) {
     const tier = mode.tiers[i];
     const colorShift = Math.floor(i / 2) * 25;
     color = Math.min(0xFFFFFF, color + colorShift);
-    
+
     ALL_ROLES.push({
       name: `${mode.name} ${tier}`,
       color,

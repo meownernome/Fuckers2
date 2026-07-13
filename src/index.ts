@@ -158,10 +158,14 @@ async function autoCreateAllRoles(guild: any) {
 }
 
 async function handleVerifyModal(interaction: ModalSubmitInteraction) {
+  if (!interaction.guild) {
+    await interaction.reply({ content: '❌ This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+    return;
+  }
   const ign = interaction.fields.getTextInputValue('minecraft_ign').trim();
-  const member = interaction.member as GuildMember;
+  const member = await interaction.guild.members.fetch(interaction.user.id);
   
-  const verifiedRole = interaction.guild?.roles.cache.find(r => r.name === '✅ Verified');
+  const verifiedRole = interaction.guild.roles.cache.find(r => r.name === '✅ Verified');
   if (verifiedRole && member.roles.cache.has(verifiedRole.id)) {
     await interaction.reply({ content: 'You are already verified!', flags: MessageFlags.Ephemeral });
     return;
@@ -171,7 +175,7 @@ async function handleVerifyModal(interaction: ModalSubmitInteraction) {
     await member.roles.add(verifiedRole, `Verified as ${ign}`);
   }
 
-  const logChannel = interaction.guild?.channels.cache.find(c => c.name === 'verification-logs') as TextChannel;
+  const logChannel = interaction.guild.channels.cache.find(c => c.name === 'verification-logs') as TextChannel;
   if (logChannel) {
     await logChannel.send({ embeds: [new EmbedBuilder().setTitle('✅ Verified').setDescription(`<@${interaction.user.id}> verified as **${ign}**`).setColor(0x00FF00).setTimestamp()] });
   }
@@ -180,6 +184,10 @@ async function handleVerifyModal(interaction: ModalSubmitInteraction) {
 }
 
 async function handleTierTestModal(interaction: ModalSubmitInteraction) {
+  if (!interaction.guild) {
+    await interaction.reply({ content: '❌ This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+    return;
+  }
   const mode = interaction.fields.getTextInputValue('game_mode').trim();
   const ign = interaction.fields.getTextInputValue('player_ign').trim();
 
@@ -189,29 +197,29 @@ async function handleTierTestModal(interaction: ModalSubmitInteraction) {
     return;
   }
 
-  const verifiedRole = interaction.guild?.roles.cache.find(r => r.name === '✅ Verified');
-  const member = interaction.member as GuildMember;
+  const verifiedRole = interaction.guild.roles.cache.find(r => r.name === '✅ Verified');
+  const member = await interaction.guild.members.fetch(interaction.user.id);
   if (verifiedRole && !member.roles.cache.has(verifiedRole.id)) {
     await interaction.reply({ content: '❌ You must be verified to request a tier test. Use the verify button in #verify.', flags: MessageFlags.Ephemeral });
     return;
   }
 
-  const category = interaction.guild?.channels.cache.find(c => c.name === 'TICKETS' && c.type === ChannelType.GuildCategory) as CategoryChannel;
+  const category = interaction.guild.channels.cache.find(c => c.name === 'TICKETS' && c.type === ChannelType.GuildCategory) as CategoryChannel;
   if (!category) {
     await interaction.reply({ content: '❌ Tickets category not found. Run /all first.', flags: MessageFlags.Ephemeral });
     return;
   }
 
   const testerRoles = ['⚔️ Head Tier Tester', '⚔️ Senior Tier Tester', '⚔️ Tier Tester', '⚔️ Trial Tier Tester'];
-  const testerRoleIds = interaction.guild?.roles.cache.filter(r => testerRoles.includes(r.name)).map(r => r.id) || [];
+  const testerRoleIds = interaction.guild.roles.cache.filter(r => testerRoles.includes(r.name)).map(r => r.id) || [];
   
   const permissionOverwrites = [
-    { id: interaction.guild!.id, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
     ...testerRoleIds.map(id => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] })),
   ];
 
-  const ticketChannel = await interaction.guild?.channels.create({
+  const ticketChannel = await interaction.guild.channels.create({
     name: `tier-test-${mode.toLowerCase().replace(/\s+/g, '-')}-${interaction.user.username}`,
     type: ChannelType.GuildText,
     parent: category.id,
@@ -249,20 +257,24 @@ async function handleTierTestModal(interaction: ModalSubmitInteraction) {
 }
 
 async function handleTicketModal(interaction: ModalSubmitInteraction) {
+  if (!interaction.guild) {
+    await interaction.reply({ content: '❌ This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+    return;
+  }
   const subject = interaction.fields.getTextInputValue('ticket_subject').trim();
   const description = interaction.fields.getTextInputValue('ticket_description').trim();
 
-  const category = interaction.guild?.channels.cache.find(c => c.name === 'SUPPORT' && c.type === ChannelType.GuildCategory) as CategoryChannel;
+  const category = interaction.guild.channels.cache.find(c => c.name === 'SUPPORT' && c.type === ChannelType.GuildCategory) as CategoryChannel;
   if (!category) {
     await interaction.reply({ content: '❌ Support category not found. Run /all first.', flags: MessageFlags.Ephemeral });
     return;
   }
 
   const staffRoles = ['🛡️ Head Administrator', '🛡️ Administrator', '🔰 Senior Moderator', '🔰 Moderator', '🔰 Trial Moderator', '💎 Support Team'];
-  const staffRoleIds = interaction.guild?.roles.cache.filter(r => staffRoles.includes(r.name)).map(r => r.id) || [];
+  const staffRoleIds = interaction.guild.roles.cache.filter(r => staffRoles.includes(r.name)).map(r => r.id) || [];
   
   const permissionOverwrites = [
-    { id: interaction.guild!.id, deny: [PermissionFlagsBits.ViewChannel] },
+    { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
     { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
     ...staffRoleIds.map(id => ({ id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] })),
   ];
@@ -296,11 +308,15 @@ async function handleTicketModal(interaction: ModalSubmitInteraction) {
 }
 
 async function handleStaffApplyModal(interaction: ModalSubmitInteraction) {
+  if (!interaction.guild) {
+    await interaction.reply({ content: '❌ This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+    return;
+  }
   const age = interaction.fields.getTextInputValue('staff_age').trim();
   const experience = interaction.fields.getTextInputValue('staff_experience').trim();
   const why = interaction.fields.getTextInputValue('staff_why').trim();
 
-  const appsChannel = interaction.guild?.channels.cache.find(c => c.name === 'applications') as TextChannel;
+  const appsChannel = interaction.guild.channels.cache.find(c => c.name === 'applications') as TextChannel;
   if (!appsChannel) {
     await interaction.reply({ content: '❌ Applications channel not found. Run /all first.', flags: MessageFlags.Ephemeral });
     return;
@@ -328,11 +344,15 @@ async function handleStaffApplyModal(interaction: ModalSubmitInteraction) {
 }
 
 async function handleTesterApplyModal(interaction: ModalSubmitInteraction) {
+  if (!interaction.guild) {
+    await interaction.reply({ content: '❌ This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+    return;
+  }
   const ign = interaction.fields.getTextInputValue('tester_ign').trim();
   const pvpExp = interaction.fields.getTextInputValue('tester_pvp_exp').trim();
   const why = interaction.fields.getTextInputValue('tester_why').trim();
 
-  const appsChannel = interaction.guild?.channels.cache.find(c => c.name === 'applications') as TextChannel;
+  const appsChannel = interaction.guild.channels.cache.find(c => c.name === 'applications') as TextChannel;
   if (!appsChannel) {
     await interaction.reply({ content: '❌ Applications channel not found. Run /all first.', flags: MessageFlags.Ephemeral });
     return;
@@ -360,6 +380,10 @@ async function handleTesterApplyModal(interaction: ModalSubmitInteraction) {
 }
 
 async function handleGiveTierModal(interaction: ModalSubmitInteraction) {
+  if (!interaction.guild) {
+    await interaction.reply({ content: '❌ This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+    return;
+  }
   const tierInput = interaction.fields.getTextInputValue('tier_input').trim().toUpperCase();
   
   if (!tierInput.match(/^(LT|HT)\s+[1-5]$/)) {
@@ -381,14 +405,14 @@ async function handleGiveTierModal(interaction: ModalSubmitInteraction) {
   const ign = ignMatch[1];
   
   const roleName = `${mode} ${tierInput}`;
-  const role = interaction.guild?.roles.cache.find(r => r.name === roleName);
+  const role = interaction.guild.roles.cache.find(r => r.name === roleName);
   
   if (!role) {
     await interaction.reply({ content: `❌ Role "${roleName}" not found.`, flags: MessageFlags.Ephemeral });
     return;
   }
 
-  const member = await interaction.guild?.members.fetch(ign).catch(() => null);
+  const member = (await interaction.guild.members.fetch({ query: ign, limit: 1 }).catch(() => null))?.first();
   if (!member) {
     await interaction.reply({ content: `❌ Could not find member with IGN: ${ign}`, flags: MessageFlags.Ephemeral });
     return;
@@ -396,7 +420,7 @@ async function handleGiveTierModal(interaction: ModalSubmitInteraction) {
 
   await member.roles.add(role, `Tier test result: ${tierInput} by ${interaction.user.tag}`);
   
-  const tierLogsChannel = interaction.guild?.channels.cache.find(c => c.name === 'tier-logs') as TextChannel;
+  const tierLogsChannel = interaction.guild.channels.cache.find(c => c.name === 'tier-logs') as TextChannel;
   if (tierLogsChannel) {
     await tierLogsChannel.send({ embeds: [new EmbedBuilder().setTitle('🏆 Tier Achieved!').setDescription(`<@${member.id}> ranked **${mode} ${tierInput}**!`).setColor(0xFFD700).setTimestamp()] });
   }

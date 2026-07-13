@@ -9,9 +9,6 @@ export const LeaderboardCommand = {
       option.setName('mode')
         .setDescription('Game mode to view (default: all)')
         .setRequired(false)
-        .addChoices(
-          ...ALL_ROLES.filter(r => r.mode).map(r => r.mode!).filter((v, i, a) => a.indexOf(v) === i).map(m => ({ name: m, value: m }))
-        )
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {

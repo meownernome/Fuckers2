@@ -158,7 +158,7 @@ async function handleTierTestModal(interaction: ModalSubmitInteraction) {
     return;
   }
 
-  const category = interaction.guild.channels.cache.find(c => c.name === 'TICKETS' && c.type === ChannelType.GuildCategory) as CategoryChannel;
+  const category = interaction.guild.channels.cache.find(c => c.name === '⚔️ TIER TESTING' && c.type === ChannelType.GuildCategory) as CategoryChannel;
   if (!category) {
     await interaction.reply({ content: '❌ Tickets category not found. Run /all first.', flags: MessageFlags.Ephemeral });
     return;
@@ -218,7 +218,7 @@ async function handleTicketModal(interaction: ModalSubmitInteraction) {
   const subject = interaction.fields.getTextInputValue('ticket_subject').trim();
   const description = interaction.fields.getTextInputValue('ticket_description').trim();
 
-  const category = interaction.guild.channels.cache.find(c => c.name === 'SUPPORT' && c.type === ChannelType.GuildCategory) as CategoryChannel;
+  const category = interaction.guild.channels.cache.find(c => c.name === '🎫 SUPPORT' && c.type === ChannelType.GuildCategory) as CategoryChannel;
   if (!category) {
     await interaction.reply({ content: '❌ Support category not found. Run /all first.', flags: MessageFlags.Ephemeral });
     return;
@@ -435,7 +435,7 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
       SendMessages: true,
       ReadMessageHistory: true,
     });
-    await interaction.reply({ content: `✅ ${interaction.user} claimed this ticket!`, ephemeral: true });
+    await interaction.reply({ content: `✅ ${interaction.user} claimed this ticket!`, flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -451,7 +451,7 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
         .setTimestamp();
       await channel.send({ embeds: [embed] });
     }
-    await interaction.reply({ content: 'Test started! IP sent to player.', ephemeral: true });
+    await interaction.reply({ content: 'Test started! IP sent to player.', flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -481,7 +481,7 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
     const embed = interaction.message.embeds[0];
     const newEmbed = EmbedBuilder.from(embed).setColor(isAccept ? 0x00FF00 : 0xFF0000).addFields({ name: 'Status', value: isAccept ? '✅ Accepted' : '❌ Denied', inline: true });
     await interaction.message.edit({ embeds: [newEmbed], components: [] });
-    await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, ephemeral: true });
+    await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -490,7 +490,7 @@ async function handleButtonInteraction(interaction: ButtonInteraction) {
     const embed = interaction.message.embeds[0];
     const newEmbed = EmbedBuilder.from(embed).setColor(isAccept ? 0x00FF00 : 0xFF0000).addFields({ name: 'Status', value: isAccept ? '✅ Accepted' : '❌ Denied', inline: true });
     await interaction.message.edit({ embeds: [newEmbed], components: [] });
-    await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, ephemeral: true });
+    await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, flags: MessageFlags.Ephemeral });
     return;
   }
 

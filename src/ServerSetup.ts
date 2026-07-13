@@ -43,7 +43,8 @@ export interface PermissionOverwriteConfig {
 
 export const CATEGORIES: CategoryConfig[] = [
   {
-    name: 'INFORMATION',
+    name: '📜 INFORMATION',
+    channels: [
     channels: [
       { name: 'welcome', type: ChannelType.GuildText, topic: 'Welcome to Harval MC!' },
       { name: 'rules', type: ChannelType.GuildText, topic: 'Server rules and guidelines' },
@@ -58,7 +59,7 @@ export const CATEGORIES: CategoryConfig[] = [
     ],
   },
   {
-    name: 'COMMUNITY',
+    name: '💬 COMMUNITY',
     channels: [
       { name: 'general', type: ChannelType.GuildText, topic: 'General chat' },
       { name: 'minecraft-chat', type: ChannelType.GuildText, topic: 'Minecraft discussion' },
@@ -71,7 +72,7 @@ export const CATEGORIES: CategoryConfig[] = [
     ],
   },
   {
-    name: 'SUPPORT',
+    name: '🎫 SUPPORT',
     channels: [
       { name: 'create-ticket', type: ChannelType.GuildText, topic: 'Create a support ticket' },
       { name: 'bug-report', type: ChannelType.GuildText, topic: 'Report bugs' },
@@ -81,7 +82,7 @@ export const CATEGORIES: CategoryConfig[] = [
     ],
   },
   {
-    name: 'TIER TESTING',
+    name: '⚔️ TIER TESTING',
     channels: [
       { name: 'request-tier-test', type: ChannelType.GuildText, topic: 'Request a tier test' },
       { name: 'queue', type: ChannelType.GuildText, topic: 'Live queue display' },
@@ -92,7 +93,7 @@ export const CATEGORIES: CategoryConfig[] = [
     ],
   },
   {
-    name: 'STAFF',
+    name: '🛡️ STAFF',
     channels: [
       { name: 'staff-chat', type: ChannelType.GuildText, topic: 'Staff discussion' },
       { name: 'commands', type: ChannelType.GuildText, topic: 'Bot commands' },
@@ -103,7 +104,7 @@ export const CATEGORIES: CategoryConfig[] = [
     ],
   },
   {
-    name: 'LOGS',
+    name: '📋 LOGS',
     channels: [
       { name: 'ticket-logs', type: ChannelType.GuildText, topic: 'Ticket logs' },
       { name: 'tier-logs', type: ChannelType.GuildText, topic: 'Tier test logs' },
@@ -116,7 +117,7 @@ export const CATEGORIES: CategoryConfig[] = [
     ],
   },
   {
-    name: 'VOICE',
+    name: '🔊 VOICE',
     channels: [
       { name: 'general-1', type: ChannelType.GuildVoice },
       { name: 'general-2', type: ChannelType.GuildVoice },

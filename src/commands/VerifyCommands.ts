@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, TextChannel, Guild } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, TextChannel, ChannelType } from 'discord.js';
 import { ServerSetup } from '../ServerSetup.js';
 
 export const VerifyCommands = {
@@ -8,17 +8,17 @@ export const VerifyCommands = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command must be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
     if (!member.permissions.has('ManageChannels')) {
-      await interaction.reply({ content: 'You need Manage Channels permission.', ephemeral: true });
+      await interaction.reply({ content: 'You need Manage Channels permission.', flags: MessageFlags.Ephemeral });
       return;
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const token = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
     if (!token) {
@@ -40,31 +40,31 @@ export const SetupVerifyCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command must be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
     if (!member.permissions.has('Administrator')) {
-      await interaction.reply({ content: 'You need Administrator permission.', ephemeral: true });
+      await interaction.reply({ content: 'You need Administrator permission.', flags: MessageFlags.Ephemeral });
       return;
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     // Create verify channel if not exists
     let verifyChannel = interaction.guild.channels.cache.find(
-      c => c.name === 'verify' && c.type === 0
+      c => c.name === 'verify' && c.type === ChannelType.GuildText
     ) as TextChannel;
 
     if (!verifyChannel) {
       const infoCategory = interaction.guild.channels.cache.find(
-        c => c.name === 'INFORMATION' && c.type === 4
+        c => c.name === '📜 INFORMATION' && c.type === ChannelType.GuildCategory
       );
 
       verifyChannel = await interaction.guild.channels.create({
         name: 'verify',
-        type: 0,
+        type: ChannelType.GuildText,
         parent: infoCategory?.id,
         topic: 'Verify your Minecraft account',
         reason: 'Auto-created verify channel',

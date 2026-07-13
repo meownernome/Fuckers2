@@ -8,7 +8,7 @@ exports.RolesCommand = {
         .setName('roles')
         .setDescription('List all configured roles (281 total)'),
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const guild = interaction.guild;
         if (!guild)
             return;

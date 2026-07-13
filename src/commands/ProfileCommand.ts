@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, User } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, User, MessageFlags } from 'discord.js';
 
 export const ProfileCommand = {
   data: new SlashCommandBuilder()
@@ -15,7 +15,7 @@ export const ProfileCommand = {
     const member = await interaction.guild?.members.fetch(target.id);
 
     if (!member) {
-      await interaction.reply({ content: 'User not found in this server.', ephemeral: true });
+      await interaction.reply({ content: 'User not found in this server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -40,6 +40,6 @@ export const ProfileCommand = {
       )
       .setFooter({ text: 'Harval MC • Tier Testing Network' });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };

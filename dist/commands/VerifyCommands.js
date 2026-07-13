@@ -9,15 +9,15 @@ exports.VerifyCommands = {
         .setDescription('Re-post the verification panel'),
     async execute(interaction) {
         if (!interaction.guild) {
-            await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+            await interaction.reply({ content: 'This command must be used in a server.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member.permissions.has('ManageChannels')) {
-            await interaction.reply({ content: 'You need Manage Channels permission.', ephemeral: true });
+            await interaction.reply({ content: 'You need Manage Channels permission.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const token = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
         if (!token) {
             await interaction.editReply({ content: 'Bot token not configured.' });
@@ -34,22 +34,22 @@ exports.SetupVerifyCommand = {
         .setDescription('Setup verification system (creates verify channel + panel)'),
     async execute(interaction) {
         if (!interaction.guild) {
-            await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+            await interaction.reply({ content: 'This command must be used in a server.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member.permissions.has('Administrator')) {
-            await interaction.reply({ content: 'You need Administrator permission.', ephemeral: true });
+            await interaction.reply({ content: 'You need Administrator permission.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         // Create verify channel if not exists
-        let verifyChannel = interaction.guild.channels.cache.find(c => c.name === 'verify' && c.type === 0);
+        let verifyChannel = interaction.guild.channels.cache.find(c => c.name === 'verify' && c.type === discord_js_1.ChannelType.GuildText);
         if (!verifyChannel) {
-            const infoCategory = interaction.guild.channels.cache.find(c => c.name === 'INFORMATION' && c.type === 4);
+            const infoCategory = interaction.guild.channels.cache.find(c => c.name === '📜 INFORMATION' && c.type === discord_js_1.ChannelType.GuildCategory);
             verifyChannel = await interaction.guild.channels.create({
                 name: 'verify',
-                type: 0,
+                type: discord_js_1.ChannelType.GuildText,
                 parent: infoCategory?.id,
                 topic: 'Verify your Minecraft account',
                 reason: 'Auto-created verify channel',

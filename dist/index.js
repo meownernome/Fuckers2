@@ -4,7 +4,6 @@ require("dotenv/config");
 const discord_js_1 = require("discord.js");
 const roles_js_1 = require("./roles.js");
 const Logger_js_1 = require("./utils/Logger.js");
-const roleCreator_js_1 = require("./utils/roleCreator.js");
 const ServerSetup_js_1 = require("./ServerSetup.js");
 const AllCommand_js_1 = require("./commands/AllCommand.js");
 const SetupCommand_js_1 = require("./commands/SetupCommand.js");
@@ -74,8 +73,6 @@ const commandMap = {
     rules: RulesCommand_js_1.RulesCommand,
     faq: FaqCommand_js_1.FaqCommand,
 };
-let roleCreationInProgress = false;
-let roleCreationComplete = false;
 async function registerCommands(guild) {
     const rest = new discord_js_1.REST({ version: '10' }).setToken(TOKEN);
     try {
@@ -91,38 +88,6 @@ async function registerCommands(guild) {
     catch (error) {
         Logger_js_1.Logger.error('Failed to register commands', error);
     }
-}
-async function autoCreateAllRoles(guild) {
-    if (roleCreationInProgress || roleCreationComplete) {
-        Logger_js_1.Logger.info('Role creation already in progress or complete, skipping');
-        return;
-    }
-    roleCreationInProgress = true;
-    Logger_js_1.Logger.info('🚀 Starting auto-creation of 281 roles...');
-    const roleCreator = new roleCreator_js_1.RoleCreator(TOKEN, guild.id);
-    const roleData = roles_js_1.ALL_ROLES.map(role => ({
-        name: role.name,
-        color: role.color,
-    }));
-    const existingRoles = await roleCreator.fetchExistingRoles();
-    const missingRoles = roleData.filter(r => !existingRoles.has(r.name));
-    Logger_js_1.Logger.info(`Found ${existingRoles.size} existing roles, ${missingRoles.length} to create`);
-    if (missingRoles.length === 0) {
-        Logger_js_1.Logger.success('✅ All 281 roles already exist!');
-        roleCreationComplete = true;
-        roleCreationInProgress = false;
-        return;
-    }
-    let created = 0;
-    for (const role of missingRoles) {
-        const roleId = await roleCreator.createRole(role);
-        if (roleId)
-            created++;
-        await new Promise(r => setTimeout(r, 1200));
-    }
-    Logger_js_1.Logger.success(`✅ Auto-role creation complete: ${created}/${missingRoles.length} new roles created`);
-    roleCreationComplete = true;
-    roleCreationInProgress = false;
 }
 async function handleVerifyModal(interaction) {
     if (!interaction.guild) {
@@ -163,7 +128,7 @@ async function handleTierTestModal(interaction) {
         await interaction.reply({ content: '❌ You must be verified to request a tier test. Use the verify button in #verify.', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
-    const category = interaction.guild.channels.cache.find(c => c.name === 'TICKETS' && c.type === discord_js_1.ChannelType.GuildCategory);
+    const category = interaction.guild.channels.cache.find(c => c.name === '⚔️ TIER TESTING' && c.type === discord_js_1.ChannelType.GuildCategory);
     if (!category) {
         await interaction.reply({ content: '❌ Tickets category not found. Run /all first.', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
@@ -203,7 +168,7 @@ async function handleTicketModal(interaction) {
     }
     const subject = interaction.fields.getTextInputValue('ticket_subject').trim();
     const description = interaction.fields.getTextInputValue('ticket_description').trim();
-    const category = interaction.guild.channels.cache.find(c => c.name === 'SUPPORT' && c.type === discord_js_1.ChannelType.GuildCategory);
+    const category = interaction.guild.channels.cache.find(c => c.name === '🎫 SUPPORT' && c.type === discord_js_1.ChannelType.GuildCategory);
     if (!category) {
         await interaction.reply({ content: '❌ Support category not found. Run /all first.', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
@@ -362,7 +327,7 @@ async function handleButtonInteraction(interaction) {
             SendMessages: true,
             ReadMessageHistory: true,
         });
-        await interaction.reply({ content: `✅ ${interaction.user} claimed this ticket!`, ephemeral: true });
+        await interaction.reply({ content: `✅ ${interaction.user} claimed this ticket!`, flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     if (customId === 'start_test') {
@@ -377,7 +342,7 @@ async function handleButtonInteraction(interaction) {
                 .setTimestamp();
             await channel.send({ embeds: [embed] });
         }
-        await interaction.reply({ content: 'Test started! IP sent to player.', ephemeral: true });
+        await interaction.reply({ content: 'Test started! IP sent to player.', flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     if (customId === 'give_tier') {
@@ -403,7 +368,7 @@ async function handleButtonInteraction(interaction) {
         const embed = interaction.message.embeds[0];
         const newEmbed = discord_js_1.EmbedBuilder.from(embed).setColor(isAccept ? 0x00FF00 : 0xFF0000).addFields({ name: 'Status', value: isAccept ? '✅ Accepted' : '❌ Denied', inline: true });
         await interaction.message.edit({ embeds: [newEmbed], components: [] });
-        await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, ephemeral: true });
+        await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     if (customId === 'accept_tester_app' || customId === 'deny_tester_app') {
@@ -411,7 +376,7 @@ async function handleButtonInteraction(interaction) {
         const embed = interaction.message.embeds[0];
         const newEmbed = discord_js_1.EmbedBuilder.from(embed).setColor(isAccept ? 0x00FF00 : 0xFF0000).addFields({ name: 'Status', value: isAccept ? '✅ Accepted' : '❌ Denied', inline: true });
         await interaction.message.edit({ embeds: [newEmbed], components: [] });
-        await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, ephemeral: true });
+        await interaction.reply({ content: `${isAccept ? '✅' : '❌'} Application ${isAccept ? 'accepted' : 'denied'}.`, flags: discord_js_1.MessageFlags.Ephemeral });
         return;
     }
     // GTG buttons
@@ -448,13 +413,9 @@ client.once(discord_js_1.Events.ClientReady, async () => {
             const guild = await client.guilds.fetch(GUILD_ID);
             Logger_js_1.Logger.info(`[BOT] Connected to guild: ${guild.name} (${guild.id})`);
             await registerCommands(guild);
-            await autoCreateAllRoles(guild);
         }
         else {
             await registerCommands();
-            for (const guild of client.guilds.cache.values()) {
-                await autoCreateAllRoles(guild);
-            }
         }
     }
     catch (error) {

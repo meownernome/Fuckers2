@@ -11,10 +11,10 @@ exports.MakeRolesCommand = {
         .setDescription('Re-create missing roles only (skips existing)'),
     async execute(interaction) {
         if (!interaction.guild) {
-            await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+            await interaction.reply({ content: 'This command must be used in a server.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member.permissions.has('ManageRoles')) {
             await interaction.editReply({ content: 'You need Manage Roles permission.' });

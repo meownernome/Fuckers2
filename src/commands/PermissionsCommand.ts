@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionsBitField } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionsBitField, MessageFlags } from 'discord.js';
 
 export const PermissionsCommand = {
   data: new SlashCommandBuilder()
@@ -7,13 +7,13 @@ export const PermissionsCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command must be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     const me = interaction.guild.members.me;
     if (!me) {
-      await interaction.reply({ content: 'Could not fetch bot member.', ephemeral: true });
+      await interaction.reply({ content: 'Could not fetch bot member.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -52,6 +52,6 @@ export const PermissionsCommand = {
     embed.addFields(fields);
     embed.setFooter({ text: 'Harval MC Bot • Permissions Check' });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };

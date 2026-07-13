@@ -8,12 +8,12 @@ exports.PermissionsCommand = {
         .setDescription('Check bot permissions in this server'),
     async execute(interaction) {
         if (!interaction.guild) {
-            await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+            await interaction.reply({ content: 'This command must be used in a server.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const me = interaction.guild.members.me;
         if (!me) {
-            await interaction.reply({ content: 'Could not fetch bot member.', ephemeral: true });
+            await interaction.reply({ content: 'Could not fetch bot member.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const perms = me.permissions;
@@ -47,7 +47,7 @@ exports.PermissionsCommand = {
         });
         embed.addFields(fields);
         embed.setFooter({ text: 'Harval MC Bot • Permissions Check' });
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], flags: discord_js_1.MessageFlags.Ephemeral });
     },
 };
 //# sourceMappingURL=PermissionsCommand.js.map

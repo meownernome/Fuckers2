@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
 export const PingCommand = {
   data: new SlashCommandBuilder()
@@ -6,7 +6,7 @@ export const PingCommand = {
     .setDescription('Check bot latency'),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true, ephemeral: true });
+    const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true, flags: MessageFlags.Ephemeral });
     const latency = sent.createdTimestamp - interaction.createdTimestamp;
     const apiLatency = Math.round(interaction.client.ws.ping);
 

@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { ChatInputCommandInteraction, SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { RoleCreator, RoleData } from '../utils/roleCreator.js';
 import { ALL_ROLES } from '../roles.js';
 import { Logger } from '../utils/Logger.js';
@@ -10,11 +10,11 @@ export const MakeRolesCommand = {
 
   async execute(interaction: ChatInputCommandInteraction) {
     if (!interaction.guild) {
-      await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+      await interaction.reply({ content: 'This command must be used in a server.', flags: MessageFlags.Ephemeral });
       return;
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
     if (!member.permissions.has('ManageRoles')) {

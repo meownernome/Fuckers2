@@ -10,10 +10,10 @@ exports.AllCommand = {
         .setDescription('Create all categories, channels, and roles for Harval MC'),
     async execute(interaction) {
         if (!interaction.guild) {
-            await interaction.reply({ content: 'This command must be used in a server.', ephemeral: true });
+            await interaction.reply({ content: 'This command must be used in a server.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const guild = interaction.guild;
         const member = await guild.members.fetch(interaction.user.id);
         if (!member.permissions.has('Administrator')) {

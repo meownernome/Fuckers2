@@ -7,7 +7,7 @@ exports.PingCommand = {
         .setName('ping')
         .setDescription('Check bot latency'),
     async execute(interaction) {
-        const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true, ephemeral: true });
+        const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true, flags: discord_js_1.MessageFlags.Ephemeral });
         const latency = sent.createdTimestamp - interaction.createdTimestamp;
         const apiLatency = Math.round(interaction.client.ws.ping);
         const embed = new discord_js_1.EmbedBuilder()

@@ -7,22 +7,24 @@ const roles_js_1 = require("./roles.js");
 const roleCreator_js_1 = require("./utils/roleCreator.js");
 exports.CATEGORIES = [
     {
-        name: 'INFORMATION',
+        name: '📜 INFORMATION',
         channels: [
-            { name: 'welcome', type: discord_js_1.ChannelType.GuildText, topic: 'Welcome to Harval MC!' },
-            { name: 'rules', type: discord_js_1.ChannelType.GuildText, topic: 'Server rules and guidelines' },
-            { name: 'faq', type: discord_js_1.ChannelType.GuildText, topic: 'Frequently asked questions' },
-            { name: 'server-ip', type: discord_js_1.ChannelType.GuildText, topic: 'Server IP and connection info' },
-            { name: 'announcements', type: discord_js_1.ChannelType.GuildText, topic: 'Server announcements' },
-            { name: 'updates', type: discord_js_1.ChannelType.GuildText, topic: 'Server updates and changelogs' },
-            { name: 'verify', type: discord_js_1.ChannelType.GuildText, topic: 'Verify your Minecraft account' },
-            { name: 'how-tier-testing-works', type: discord_js_1.ChannelType.GuildText, topic: 'How tier testing works' },
-            { name: 'staff', type: discord_js_1.ChannelType.GuildText, topic: 'Staff team listing' },
-            { name: 'roles', type: discord_js_1.ChannelType.GuildText, topic: 'Role information and applications' },
-        ],
+            channels, [
+                { name: 'welcome', type: discord_js_1.ChannelType.GuildText, topic: 'Welcome to Harval MC!' },
+                { name: 'rules', type: discord_js_1.ChannelType.GuildText, topic: 'Server rules and guidelines' },
+                { name: 'faq', type: discord_js_1.ChannelType.GuildText, topic: 'Frequently asked questions' },
+                { name: 'server-ip', type: discord_js_1.ChannelType.GuildText, topic: 'Server IP and connection info' },
+                { name: 'announcements', type: discord_js_1.ChannelType.GuildText, topic: 'Server announcements' },
+                { name: 'updates', type: discord_js_1.ChannelType.GuildText, topic: 'Server updates and changelogs' },
+                { name: 'verify', type: discord_js_1.ChannelType.GuildText, topic: 'Verify your Minecraft account' },
+                { name: 'how-tier-testing-works', type: discord_js_1.ChannelType.GuildText, topic: 'How tier testing works' },
+                { name: 'staff', type: discord_js_1.ChannelType.GuildText, topic: 'Staff team listing' },
+                { name: 'roles', type: discord_js_1.ChannelType.GuildText, topic: 'Role information and applications' },
+            ],
+        ]
     },
     {
-        name: 'COMMUNITY',
+        name: '💬 COMMUNITY',
         channels: [
             { name: 'general', type: discord_js_1.ChannelType.GuildText, topic: 'General chat' },
             { name: 'minecraft-chat', type: discord_js_1.ChannelType.GuildText, topic: 'Minecraft discussion' },
@@ -35,7 +37,7 @@ exports.CATEGORIES = [
         ],
     },
     {
-        name: 'SUPPORT',
+        name: '🎫 SUPPORT',
         channels: [
             { name: 'create-ticket', type: discord_js_1.ChannelType.GuildText, topic: 'Create a support ticket' },
             { name: 'bug-report', type: discord_js_1.ChannelType.GuildText, topic: 'Report bugs' },
@@ -45,7 +47,7 @@ exports.CATEGORIES = [
         ],
     },
     {
-        name: 'TIER TESTING',
+        name: '⚔️ TIER TESTING',
         channels: [
             { name: 'request-tier-test', type: discord_js_1.ChannelType.GuildText, topic: 'Request a tier test' },
             { name: 'queue', type: discord_js_1.ChannelType.GuildText, topic: 'Live queue display' },
@@ -56,7 +58,7 @@ exports.CATEGORIES = [
         ],
     },
     {
-        name: 'STAFF',
+        name: '🛡️ STAFF',
         channels: [
             { name: 'staff-chat', type: discord_js_1.ChannelType.GuildText, topic: 'Staff discussion' },
             { name: 'commands', type: discord_js_1.ChannelType.GuildText, topic: 'Bot commands' },
@@ -67,7 +69,7 @@ exports.CATEGORIES = [
         ],
     },
     {
-        name: 'LOGS',
+        name: '📋 LOGS',
         channels: [
             { name: 'ticket-logs', type: discord_js_1.ChannelType.GuildText, topic: 'Ticket logs' },
             { name: 'tier-logs', type: discord_js_1.ChannelType.GuildText, topic: 'Tier test logs' },
@@ -80,7 +82,7 @@ exports.CATEGORIES = [
         ],
     },
     {
-        name: 'VOICE',
+        name: '🔊 VOICE',
         channels: [
             { name: 'general-1', type: discord_js_1.ChannelType.GuildVoice },
             { name: 'general-2', type: discord_js_1.ChannelType.GuildVoice },

@@ -13,7 +13,7 @@ exports.ProfileCommand = {
         const target = interaction.options.getUser('user') || interaction.user;
         const member = await interaction.guild?.members.fetch(target.id);
         if (!member) {
-            await interaction.reply({ content: 'User not found in this server.', ephemeral: true });
+            await interaction.reply({ content: 'User not found in this server.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const tierRoles = member.roles.cache.filter(r => r.name.match(/^(Sword|Crystal|SMP|Netherite Pot|Diamond Pot|UHC|BuildUHC|NoDebuff|Combo|Gapple|OP Duel|Boxing|Axe|Mace|Anchor|Cart PvP|Bedwars|Skywars|Bridge|Nodebuff|Vanilla|Crossbow|Trident|Shield|Elytra Combat|Custom Duel)\s+(LT|HT)\s+[1-5]$/));
@@ -25,7 +25,7 @@ exports.ProfileCommand = {
             .setColor(0xFFD700)
             .addFields({ name: '📛 Discord', value: `${target.tag} (${target.id})`, inline: true }, { name: '✅ Verified', value: verified ? 'Yes' : 'No', inline: true }, { name: '📅 Joined', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true }, { name: `🏆 Tiers (${tierRoles.size}/260)`, value: tierRoles.size > 0 ? tierRoles.map(r => `\`${r.name}\``).join(', ') : 'No tiers yet', inline: false }, { name: `👑 Staff Roles (${staffRoles.size})`, value: staffRoles.size > 0 ? staffRoles.map(r => `\`${r.name}\``).join(', ') : 'None', inline: false })
             .setFooter({ text: 'Harval MC • Tier Testing Network' });
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], flags: discord_js_1.MessageFlags.Ephemeral });
     },
 };
 //# sourceMappingURL=ProfileCommand.js.map

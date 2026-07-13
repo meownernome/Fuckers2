@@ -1,1 +1,1 @@
-{"version":3,"file":"GtgCommand.d.ts","sourceRoot":"","sources":["../../src/commands/GtgCommand.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,2BAA2B,EAAE,mBAAmB,EAA4E,iBAAiB,EAAE,MAAM,YAAY,CAAC;AAY3K,eAAO,MAAM,UAAU;;yBAKM,2BAA2B;8BA8CtB,iBAAiB;CAwClD,CAAC"}
+{"version":3,"file":"GtgCommand.d.ts","sourceRoot":"","sources":["../../src/commands/GtgCommand.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,2BAA2B,EAAE,mBAAmB,EAA4E,iBAAiB,EAAE,MAAM,YAAY,CAAC;AAY3K,eAAO,MAAM,UAAU;;yBAKM,2BAA2B;8BA8CtB,iBAAiB;CAkClD,CAAC"}

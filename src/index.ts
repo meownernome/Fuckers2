@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getAllCommands } from './commands';
 import { ServerSetup } from './ServerSetup';
+import { GtgCommand } from './commands/GtgCommand';
 
 dotenv.config();
 
@@ -83,6 +84,9 @@ client.on(Events.InteractionCreate, async (interaction: any) => {
 
 async function handleButton(interaction: any) {
   const id = interaction.customId;
+
+  if (id.startsWith('gtg_create_')) return GtgCommand.handleButton(interaction);
+  if (id.startsWith('gtg_skip_')) return GtgCommand.handleSkip(interaction);
 
   if (id === 'verify_button') {
     const modal = new ModalBuilder().setCustomId('verify_modal').setTitle('✅ Verify Your Account');

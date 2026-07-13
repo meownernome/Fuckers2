@@ -40,6 +40,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const discord_js_1 = require("discord.js");
 const commands_1 = require("./commands");
 const ServerSetup_1 = require("./ServerSetup");
+const GtgCommand_1 = require("./commands/GtgCommand");
 dotenv_1.default.config();
 const client = new discord_js_1.Client({
     intents: [
@@ -120,6 +121,10 @@ client.on(discord_js_1.Events.InteractionCreate, async (interaction) => {
 });
 async function handleButton(interaction) {
     const id = interaction.customId;
+    if (id.startsWith('gtg_create_'))
+        return GtgCommand_1.GtgCommand.handleButton(interaction);
+    if (id.startsWith('gtg_skip_'))
+        return GtgCommand_1.GtgCommand.handleSkip(interaction);
     if (id === 'verify_button') {
         const modal = new discord_js_1.ModalBuilder().setCustomId('verify_modal').setTitle('✅ Verify Your Account');
         modal.addComponents(new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.TextInputBuilder().setCustomId('ign').setLabel('Your Minecraft IGN').setStyle(discord_js_1.TextInputStyle.Short).setRequired(true).setPlaceholder('e.g. Notch')));

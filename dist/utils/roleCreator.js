@@ -4,8 +4,6 @@ exports.RoleCreator = void 0;
 const discord_js_1 = require("discord.js");
 const Logger_js_1 = require("../utils/Logger.js");
 const REST_DELAY_MS = 1200;
-const MAX_RETRIES = 3;
-const REQUEST_TIMEOUT_MS = 20000;
 class RoleCreator {
     rest;
     guildId;
@@ -14,54 +12,37 @@ class RoleCreator {
         this.guildId = guildId;
     }
     async createRole(roleData) {
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-            try {
-                const body = {
-                    name: roleData.name,
-                    color: roleData.color,
-                    permissions: roleData.permissions || '0',
-                    mentionable: false,
-                    hoist: false,
-                };
-                const role = await this.rest.post(discord_js_1.Routes.guildRoles(this.guildId), { body, signal: controller.signal });
-                clearTimeout(timeoutId);
-                Logger_js_1.Logger.success(`Created role: ${roleData.name} (${role.id})`);
-                return role.id;
-            }
-            catch (error) {
-                clearTimeout(timeoutId);
-                if (error instanceof Error && error.name === 'AbortError') {
-                    Logger_js_1.Logger.error(`Role creation timeout for ${roleData.name}`, error);
-                    if (attempt < MAX_RETRIES) {
-                        await this.delay(REST_DELAY_MS * 2);
-                        continue;
-                    }
-                    return null;
-                }
-                const restError = error;
-                if (restError.status === 429) {
-                    const retryAfter = restError.rawError?.retry_after ?? REST_DELAY_MS;
-                    Logger_js_1.Logger.rateLimit(`Rate limited creating ${roleData.name}`, retryAfter);
-                    await this.delay(retryAfter);
-                    continue;
-                }
-                if (restError.status === 400 && restError.rawError?.code === 50035) {
-                    Logger_js_1.Logger.warn(`Role name invalid: ${roleData.name}`);
-                    return null;
-                }
-                if (restError.status === 403) {
-                    Logger_js_1.Logger.error(`Missing permissions to create role: ${roleData.name}`, error);
-                    return null;
-                }
-                Logger_js_1.Logger.error(`Failed to create role ${roleData.name} (attempt ${attempt}/${MAX_RETRIES})`, error);
-                if (attempt < MAX_RETRIES) {
-                    await this.delay(REST_DELAY_MS);
-                }
-            }
+        try {
+            const body = {
+                name: roleData.name,
+                color: roleData.color,
+                permissions: roleData.permissions || '0',
+                mentionable: false,
+                hoist: false,
+            };
+            const role = await this.rest.post(discord_js_1.Routes.guildRoles(this.guildId), { body });
+            Logger_js_1.Logger.success(`Created role: ${roleData.name} (${role.id})`);
+            return role.id;
         }
-        return null;
+        catch (error) {
+            const restError = error;
+            if (restError.status === 429) {
+                const retryAfter = (restError.rawError?.retry_after ?? 5) * 1000;
+                Logger_js_1.Logger.warn(`Rate limited on ${roleData.name}, waiting ${retryAfter}ms`);
+                await this.delay(retryAfter);
+                return await this.createRole(roleData);
+            }
+            if (restError.status === 400 && restError.rawError?.code === 50035) {
+                Logger_js_1.Logger.warn(`Role name invalid: ${roleData.name} - ${restError.rawError?.message}`);
+                return null;
+            }
+            if (restError.status === 403) {
+                Logger_js_1.Logger.error(`Missing permissions to create role: ${roleData.name}`);
+                return null;
+            }
+            Logger_js_1.Logger.error(`Failed to create role ${roleData.name}`, error);
+            return null;
+        }
     }
     async createRolesSequentially(roles) {
         const createdRoles = new Map();
@@ -89,10 +70,7 @@ class RoleCreator {
     }
     async fetchExistingRoles() {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-            const roles = await this.rest.get(discord_js_1.Routes.guildRoles(this.guildId), { signal: controller.signal });
-            clearTimeout(timeoutId);
+            const roles = await this.rest.get(discord_js_1.Routes.guildRoles(this.guildId));
             const roleMap = new Map();
             for (const role of roles) {
                 roleMap.set(role.name, role.id);
@@ -106,31 +84,22 @@ class RoleCreator {
         }
     }
     async deleteRole(roleId) {
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-            try {
-                await this.rest.delete(discord_js_1.Routes.guildRole(this.guildId, roleId), { signal: controller.signal });
-                clearTimeout(timeoutId);
-                Logger_js_1.Logger.success(`Deleted role: ${roleId}`);
-                return true;
-            }
-            catch (error) {
-                clearTimeout(timeoutId);
-                const restError = error;
-                if (restError.status === 429) {
-                    const retryAfter = restError.rawError?.retry_after ?? REST_DELAY_MS;
-                    Logger_js_1.Logger.rateLimit(`Rate limited deleting role ${roleId}`, retryAfter);
-                    await this.delay(retryAfter);
-                    continue;
-                }
-                Logger_js_1.Logger.error(`Failed to delete role ${roleId} (attempt ${attempt}/${MAX_RETRIES})`, error);
-                if (attempt < MAX_RETRIES) {
-                    await this.delay(REST_DELAY_MS);
-                }
-            }
+        try {
+            await this.rest.delete(discord_js_1.Routes.guildRole(this.guildId, roleId));
+            Logger_js_1.Logger.success(`Deleted role: ${roleId}`);
+            return true;
         }
-        return false;
+        catch (error) {
+            const restError = error;
+            if (restError.status === 429) {
+                const retryAfter = 5000;
+                Logger_js_1.Logger.warn(`Rate limited deleting role ${roleId}, waiting ${retryAfter}ms`);
+                await this.delay(retryAfter);
+                return await this.deleteRole(roleId);
+            }
+            Logger_js_1.Logger.error(`Failed to delete role ${roleId}`, error);
+            return false;
+        }
     }
     async deleteAllRoles(roleIds) {
         let deleted = 0;

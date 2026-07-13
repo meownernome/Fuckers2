@@ -45,7 +45,6 @@ export const CATEGORIES: CategoryConfig[] = [
   {
     name: '📜 INFORMATION',
     channels: [
-    channels: [
       { name: 'welcome', type: ChannelType.GuildText, topic: 'Welcome to Harval MC!' },
       { name: 'rules', type: ChannelType.GuildText, topic: 'Server rules and guidelines' },
       { name: 'faq', type: ChannelType.GuildText, topic: 'Frequently asked questions' },

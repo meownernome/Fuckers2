@@ -9,19 +9,17 @@ exports.CATEGORIES = [
     {
         name: '📜 INFORMATION',
         channels: [
-            channels, [
-                { name: 'welcome', type: discord_js_1.ChannelType.GuildText, topic: 'Welcome to Harval MC!' },
-                { name: 'rules', type: discord_js_1.ChannelType.GuildText, topic: 'Server rules and guidelines' },
-                { name: 'faq', type: discord_js_1.ChannelType.GuildText, topic: 'Frequently asked questions' },
-                { name: 'server-ip', type: discord_js_1.ChannelType.GuildText, topic: 'Server IP and connection info' },
-                { name: 'announcements', type: discord_js_1.ChannelType.GuildText, topic: 'Server announcements' },
-                { name: 'updates', type: discord_js_1.ChannelType.GuildText, topic: 'Server updates and changelogs' },
-                { name: 'verify', type: discord_js_1.ChannelType.GuildText, topic: 'Verify your Minecraft account' },
-                { name: 'how-tier-testing-works', type: discord_js_1.ChannelType.GuildText, topic: 'How tier testing works' },
-                { name: 'staff', type: discord_js_1.ChannelType.GuildText, topic: 'Staff team listing' },
-                { name: 'roles', type: discord_js_1.ChannelType.GuildText, topic: 'Role information and applications' },
-            ],
-        ]
+            { name: 'welcome', type: discord_js_1.ChannelType.GuildText, topic: 'Welcome to Harval MC!' },
+            { name: 'rules', type: discord_js_1.ChannelType.GuildText, topic: 'Server rules and guidelines' },
+            { name: 'faq', type: discord_js_1.ChannelType.GuildText, topic: 'Frequently asked questions' },
+            { name: 'server-ip', type: discord_js_1.ChannelType.GuildText, topic: 'Server IP and connection info' },
+            { name: 'announcements', type: discord_js_1.ChannelType.GuildText, topic: 'Server announcements' },
+            { name: 'updates', type: discord_js_1.ChannelType.GuildText, topic: 'Server updates and changelogs' },
+            { name: 'verify', type: discord_js_1.ChannelType.GuildText, topic: 'Verify your Minecraft account' },
+            { name: 'how-tier-testing-works', type: discord_js_1.ChannelType.GuildText, topic: 'How tier testing works' },
+            { name: 'staff', type: discord_js_1.ChannelType.GuildText, topic: 'Staff team listing' },
+            { name: 'roles', type: discord_js_1.ChannelType.GuildText, topic: 'Role information and applications' },
+        ],
     },
     {
         name: '💬 COMMUNITY',

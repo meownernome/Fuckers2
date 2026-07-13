@@ -5,9 +5,9 @@ exports.getAllCommands = getAllCommands;
 const AllCommand_1 = require("./AllCommand");
 const ChannelsCommand_1 = require("./ChannelsCommand");
 const CleanupCommand_1 = require("./CleanupCommand");
-const FAQCommand_1 = require("./FAQCommand");
+const FaqCommand_1 = require("./FaqCommand");
 const GtgCommand_1 = require("./GtgCommand");
-const IPCommand_1 = require("./IPCommand");
+const IpCommand_1 = require("./IpCommand");
 const LeaderboardCommand_1 = require("./LeaderboardCommand");
 const MakeRolesCommand_1 = require("./MakeRolesCommand");
 const PermissionCommand_1 = require("./PermissionCommand");
@@ -21,9 +21,9 @@ const commandList = [
     new AllCommand_1.AllCommand(),
     new ChannelsCommand_1.ChannelsCommand(),
     new CleanupCommand_1.CleanupCommand(),
-    new FAQCommand_1.FAQCommand(),
+    new FaqCommand_1.FAQCommand(),
     new GtgCommand_1.GtgCommand(),
-    new IPCommand_1.IPCommand(),
+    new IpCommand_1.IPCommand(),
     new LeaderboardCommand_1.LeaderboardCommand(),
     new MakeRolesCommand_1.MakeRolesCommand(),
     new MakeRolesCommand_1.MakeRolesCommand('makeroels'),
@@ -44,12 +44,12 @@ var ChannelsCommand_2 = require("./ChannelsCommand");
 Object.defineProperty(exports, "ChannelsCommand", { enumerable: true, get: function () { return ChannelsCommand_2.ChannelsCommand; } });
 var CleanupCommand_2 = require("./CleanupCommand");
 Object.defineProperty(exports, "CleanupCommand", { enumerable: true, get: function () { return CleanupCommand_2.CleanupCommand; } });
-var FAQCommand_2 = require("./FAQCommand");
-Object.defineProperty(exports, "FAQCommand", { enumerable: true, get: function () { return FAQCommand_2.FAQCommand; } });
+var FaqCommand_2 = require("./FaqCommand");
+Object.defineProperty(exports, "FAQCommand", { enumerable: true, get: function () { return FaqCommand_2.FAQCommand; } });
 var GtgCommand_2 = require("./GtgCommand");
 Object.defineProperty(exports, "GtgCommand", { enumerable: true, get: function () { return GtgCommand_2.GtgCommand; } });
-var IPCommand_2 = require("./IPCommand");
-Object.defineProperty(exports, "IPCommand", { enumerable: true, get: function () { return IPCommand_2.IPCommand; } });
+var IpCommand_2 = require("./IpCommand");
+Object.defineProperty(exports, "IPCommand", { enumerable: true, get: function () { return IpCommand_2.IPCommand; } });
 var LeaderboardCommand_2 = require("./LeaderboardCommand");
 Object.defineProperty(exports, "LeaderboardCommand", { enumerable: true, get: function () { return LeaderboardCommand_2.LeaderboardCommand; } });
 var MakeRolesCommand_2 = require("./MakeRolesCommand");

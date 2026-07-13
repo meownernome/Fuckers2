@@ -1,9 +1,9 @@
 import { AllCommand } from './AllCommand';
 import { ChannelsCommand } from './ChannelsCommand';
 import { CleanupCommand } from './CleanupCommand';
-import { FAQCommand } from './FAQCommand';
+import { FAQCommand } from './FaqCommand';
 import { GtgCommand } from './GtgCommand';
-import { IPCommand } from './IPCommand';
+import { IPCommand } from './IpCommand';
 import { LeaderboardCommand } from './LeaderboardCommand';
 import { MakeRolesCommand } from './MakeRolesCommand';
 import { PermissionCommand } from './PermissionCommand';
@@ -45,9 +45,9 @@ export function getAllCommands(): Command[] {
 export { AllCommand } from './AllCommand';
 export { ChannelsCommand } from './ChannelsCommand';
 export { CleanupCommand } from './CleanupCommand';
-export { FAQCommand } from './FAQCommand';
+export { FAQCommand } from './FaqCommand';
 export { GtgCommand } from './GtgCommand';
-export { IPCommand } from './IPCommand';
+export { IPCommand } from './IpCommand';
 export { LeaderboardCommand } from './LeaderboardCommand';
 export { MakeRolesCommand } from './MakeRolesCommand';
 export { PermissionCommand } from './PermissionCommand';

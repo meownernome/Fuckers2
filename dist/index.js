@@ -1,10 +1,44 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
+const path = __importStar(require("path"));
 const discord_js_1 = require("discord.js");
 const commands_1 = require("./commands");
 const ServerSetup_1 = require("./ServerSetup");
@@ -12,6 +46,7 @@ const GtgCommand_1 = require("./commands/GtgCommand");
 const roles_1 = require("./roles");
 const textStyles_1 = require("./utils/textStyles");
 const roleCreator_1 = require("./utils/roleCreator");
+const pointsSystem_1 = require("./utils/pointsSystem");
 dotenv_1.default.config();
 const client = new discord_js_1.Client({
     intents: [
@@ -79,15 +114,24 @@ client.on(discord_js_1.Events.GuildMemberAdd, async (member) => {
     const welcomeCh = guild.channels.cache.find((c) => c.name === welcomeName && c.type === discord_js_1.ChannelType.GuildText);
     if (welcomeCh) {
         const embed = new discord_js_1.EmbedBuilder()
-            .setTitle('\u300C \u2726 ＷＥＬＣＯＭＥ \u2726 \u300D')
-            .setDescription(`### 👋 Welcome ${member.user}\n\nWe hope you enjoy your stay at **HARVAL MC**!\n\n> 📜 Read the rules\n> ✅ Verify in <#verify>\n> ⚔️ Request a tier test`)
+            .setTitle('「 ✦ ＷＥＬＣＯＭＥ ✦ 」')
+            .setDescription(`━━━━━━━━━━━━━━━━━━━━━━━━\n\n👋 **Welcome to HARVAL MC, ${member.user.username}!**\n\n> We are the ultimate Minecraft PvP Tier Testing network.\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n**Quick Start Guide:**\n📜 Read the rules in <#rules>\n✅ Verify in <#verify>\n⚔️ Request a tier test in <#request-tier-test>\n🎫 Open a ticket in <#create-ticket>\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n> **Server IP:** \`play.harvalmc.fun\`\n━━━━━━━━━━━━━━━━━━━━━━━━\n\u2726 Member #${guild.memberCount} \u2726`)
             .setColor(0xFFD700)
-            .setFooter({ text: `\u2726 Member #${guild.memberCount} \u2726` })
             .setTimestamp();
         welcomeCh.send({ embeds: [embed], content: `${member.user}` }).catch(() => { });
     }
+    try {
+        const dmEmbed = new discord_js_1.EmbedBuilder()
+            .setTitle('「 ✦ ＨＡＲＶＡＬ ＭＣ ✦ 」')
+            .setDescription(`━━━━━━━━━━━━━━━━━━━━━━━━\n\n👋 **Welcome to HARVAL MC, ${member.user.username}!**\n\n> *The Ultimate Minecraft PvP Tier Testing Network*\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n**╔══════════════════╗**\n║  GETTING STARTED  ║\n**╚══════════════════╝**\n\n📜 **Step 1** — Read the rules\n✅ **Step 2** — Verify your account\n⚔️ **Step 3** — Request a tier test\n🎫 **Step 4** — Need help? Open a ticket\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n**Server IP:** \`play.harvalmc.fun\`\n━━━━━━━━━━━━━━━━━━━━━━━━`)
+            .setColor(0xFFD700)
+            .setFooter({ text: '✦ HARVAL MC ✦ | Competitive PvP' })
+            .setTimestamp();
+        await member.send({ embeds: [dmEmbed] });
+    }
+    catch { }
     const logEmbed = new discord_js_1.EmbedBuilder()
-        .setTitle('\u300C \u2726 ＪＯＩＮ \u2726 \u300D')
+        .setTitle('「 ✦ ＪＯＩＮ ✦ 」')
         .setDescription(`**${member.user.tag}** joined the server.`)
         .setColor(0x2ECC71)
         .setFooter({ text: `ID: ${member.id}` })
@@ -311,9 +355,10 @@ async function handleModal(interaction) {
             }
             catch { }
         }
+        (0, pointsSystem_1.setPlayerIGN)(interaction.user.id, ign);
         await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, flags: discord_js_1.MessageFlags.Ephemeral });
         const logEmbed = new discord_js_1.EmbedBuilder()
-            .setTitle('\u300C \u2726 ＶＥＲＩＦＹ \u2726 \u300D')
+            .setTitle('「 ✦ ＶＥＲＩＦＹ ✦ 」')
             .setDescription(`**${interaction.user.tag}** verified as **${ign}**.`)
             .setColor(0x2ECC71).setTimestamp();
         await logToChannel(interaction.guild, 'verification-logs', logEmbed);
@@ -453,7 +498,64 @@ async function handleApplication(interaction, title, type, fields, color) {
 }
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const app = (0, express_1.default)();
-app.get('/', (_req, res) => res.json({ status: 'ok', bot: client.user?.tag }));
+app.use(express_1.default.static(path.join(process.cwd(), 'website')));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', bot: client.user?.tag }));
+app.get('/api/leaderboard', async (_req, res) => {
+    try {
+        const lb = (0, pointsSystem_1.getLeaderboard)();
+        const enriched = await Promise.all(lb.slice(0, 100).map(async (p) => {
+            let skinUrl = null;
+            if (p.ign && p.ign !== p.userId) {
+                skinUrl = `https://mc-heads.net/avatar/${p.ign}/64`;
+            }
+            return { ...p, skin: skinUrl };
+        }));
+        res.json(enriched);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+app.get('/api/players', async (_req, res) => {
+    try {
+        const guild = client.guilds.cache.first();
+        if (!guild)
+            return res.json([]);
+        await guild.members.fetch();
+        const data = (0, pointsSystem_1.getAllPlayerData)();
+        const players = guild.members.cache.map(m => {
+            const pd = data[m.id] || {};
+            const tierRoles = {};
+            const tierPattern = /「 ✦ (.+?) (LT|HT) [1-5] ✦ 」/;
+            for (const role of m.roles.cache.values()) {
+                const match = role.name.match(tierPattern);
+                if (match) {
+                    const mode = match[1];
+                    const tier = `${match[2]} ${match[3] || ''}`.trim();
+                    if (!tierRoles[mode] || compareTier(tier, tierRoles[mode]) > 0) {
+                        tierRoles[mode] = tier;
+                    }
+                }
+            }
+            return {
+                id: m.id,
+                name: m.user.username,
+                ign: pd.ign || m.user.username,
+                roles: tierRoles,
+                totalPoints: pd.points || 0,
+                skin: pd.ign ? `https://mc-heads.net/avatar/${pd.ign}/64` : null,
+            };
+        });
+        res.json(players);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+function compareTier(a, b) {
+    const order = ['LT 1', 'HT 1', 'LT 2', 'HT 2', 'LT 3', 'HT 3', 'LT 4', 'HT 4', 'LT 5', 'HT 5'];
+    return order.indexOf(a) - order.indexOf(b);
+}
 app.listen(PORT, () => console.log(`🌐 Health check server on port ${PORT}`));
 if (!DISCORD_TOKEN) {
     console.error('❌ No DISCORD_TOKEN env var set');

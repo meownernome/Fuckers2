@@ -39,6 +39,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const roles_1 = require("../roles");
 const textStyles_1 = require("../utils/textStyles");
+const pointsSystem_1 = require("../utils/pointsSystem");
 const roleCreator_1 = require("../utils/roleCreator");
 const gtgState = new Map();
 function isStaff(member) {
@@ -74,6 +75,9 @@ class GtgCommand {
         }
         else if (sub === 'mode') {
             await this.handleMode(interaction);
+        }
+        else if (sub === 'give') {
+            await this.handleGive(interaction);
         }
         else {
             await this.handleGtg(interaction);
@@ -232,6 +236,58 @@ class GtgCommand {
             .setColor(0x2ECC71).setTimestamp();
         await interaction.editReply({ content: null, embeds: [embed] });
     }
+    async handleGive(interaction) {
+        if (!isStaff(interaction.member)) {
+            await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        const user = interaction.options.getUser('user', true);
+        const mode = interaction.options.getString('mode', true);
+        const tier = interaction.options.getString('tier', true);
+        const tierLabel = `${tier.toUpperCase().includes('LT') ? 'LT' : 'HT'} ${tier.replace(/[^0-9]/g, '')}`;
+        if (!roles_1.MODES.includes(mode)) {
+            await interaction.reply({ content: `❌ Invalid mode. Available: ${roles_1.MODES.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        const validTiers = roles_1.TIERS.map(t => t.name);
+        if (!validTiers.includes(tierLabel)) {
+            await interaction.reply({ content: `❌ Invalid tier. Use: ${validTiers.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
+        const guild = interaction.guild;
+        const member = await guild.members.fetch(user.id).catch(() => null);
+        if (!member) {
+            await interaction.editReply({ content: '❌ User not found in this server.' });
+            return;
+        }
+        const roleName = (0, textStyles_1.formatRoleName)(`${mode} ${tierLabel}`);
+        let role = guild.roles.cache.find((r) => r.name === roleName);
+        if (!role) {
+            try {
+                const tierData = roles_1.TIERS.find(t => t.name === tierLabel);
+                role = await guild.roles.create({ name: roleName, colors: { primaryColor: tierData.color }, hoist: false, mentionable: false, reason: `GTG give by ${interaction.user.tag}` });
+            }
+            catch (e) {
+                await interaction.editReply({ content: `❌ Failed to create role: ${e.message}` });
+                return;
+            }
+        }
+        try {
+            await member.roles.add(role);
+            if (pointsSystem_1.POINT_MODES.includes(mode) && pointsSystem_1.TIER_POINTS[tierLabel]) {
+                (0, pointsSystem_1.addTierPoints)(user.id, mode, tierLabel, user.displayName);
+            }
+            const embed = new discord_js_1.EmbedBuilder()
+                .setTitle('✅ Role Given')
+                .setDescription(`**${user}** received **${roleName}**`)
+                .setColor(0x2ECC71).setTimestamp();
+            await interaction.editReply({ embeds: [embed] });
+        }
+        catch (e) {
+            await interaction.editReply({ content: `❌ Failed to give role: ${e.message}` });
+        }
+    }
     static async handleButton(interaction) {
         if (!interaction.customId.startsWith('gtg_create_'))
             return;
@@ -331,6 +387,12 @@ class GtgCommand {
             .setName('mode')
             .setDescription('Create all 10 tiers for a specific PvP mode')
             .addStringOption(opt => opt.setName('mode').setDescription('PvP mode name').setRequired(true).setAutocomplete(true)))
+            .addSubcommand(sub => sub
+            .setName('give')
+            .setDescription('Give a tier role to a user')
+            .addUserOption(opt => opt.setName('user').setDescription('User to give the role to').setRequired(true))
+            .addStringOption(opt => opt.setName('mode').setDescription('PvP mode').setRequired(true).setAutocomplete(true))
+            .addStringOption(opt => opt.setName('tier').setDescription('Tier (e.g. HT 1, LT 5)').setRequired(true)))
             .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.ManageRoles)
             .setDMPermission(false);
     }

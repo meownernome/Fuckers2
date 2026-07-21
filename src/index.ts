@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import * as path from 'path';
 import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits, MessageFlags, GuildMember } from 'discord.js';
 import { getAllCommands } from './commands';
 import { ServerSetup, CATEGORIES, CHANNEL_KEYS } from './ServerSetup';
@@ -8,6 +9,7 @@ import { ALL_ROLES, getTierRoleName, STAFF_EMOJI_PREFIX, MODES } from './roles';
 import { formatStaffRoleName, toMathBold } from './utils/textStyles';
 import { createRole } from './utils/roleCreator';
 import { logger } from './utils/Logger';
+import { setPlayerIGN, getLeaderboard, getAllPlayerData, addTierPoints } from './utils/pointsSystem';
 
 dotenv.config();
 
@@ -81,16 +83,25 @@ client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
   const welcomeCh = guild.channels.cache.find((c: any) => c.name === welcomeName && c.type === ChannelType.GuildText) as any;
   if (welcomeCh) {
     const embed = new EmbedBuilder()
-      .setTitle('\u300C \u2726 ＷＥＬＣＯＭＥ \u2726 \u300D')
-      .setDescription(`### 👋 Welcome ${member.user}\n\nWe hope you enjoy your stay at **HARVAL MC**!\n\n> 📜 Read the rules\n> ✅ Verify in <#verify>\n> ⚔️ Request a tier test`)
+      .setTitle('「 ✦ ＷＥＬＣＯＭＥ ✦ 」')
+      .setDescription(`━━━━━━━━━━━━━━━━━━━━━━━━\n\n👋 **Welcome to HARVAL MC, ${member.user.username}!**\n\n> We are the ultimate Minecraft PvP Tier Testing network.\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n**Quick Start Guide:**\n📜 Read the rules in <#rules>\n✅ Verify in <#verify>\n⚔️ Request a tier test in <#request-tier-test>\n🎫 Open a ticket in <#create-ticket>\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n> **Server IP:** \`play.harvalmc.fun\`\n━━━━━━━━━━━━━━━━━━━━━━━━\n\u2726 Member #${guild.memberCount} \u2726`)
       .setColor(0xFFD700)
-      .setFooter({ text: `\u2726 Member #${guild.memberCount} \u2726` })
       .setTimestamp();
     welcomeCh.send({ embeds: [embed] as any, content: `${member.user}` }).catch(() => {});
   }
 
+  try {
+    const dmEmbed = new EmbedBuilder()
+      .setTitle('「 ✦ ＨＡＲＶＡＬ ＭＣ ✦ 」')
+      .setDescription(`━━━━━━━━━━━━━━━━━━━━━━━━\n\n👋 **Welcome to HARVAL MC, ${member.user.username}!**\n\n> *The Ultimate Minecraft PvP Tier Testing Network*\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n**╔══════════════════╗**\n║  GETTING STARTED  ║\n**╚══════════════════╝**\n\n📜 **Step 1** — Read the rules\n✅ **Step 2** — Verify your account\n⚔️ **Step 3** — Request a tier test\n🎫 **Step 4** — Need help? Open a ticket\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n**Server IP:** \`play.harvalmc.fun\`\n━━━━━━━━━━━━━━━━━━━━━━━━`)
+      .setColor(0xFFD700)
+      .setFooter({ text: '✦ HARVAL MC ✦ | Competitive PvP' })
+      .setTimestamp();
+    await member.send({ embeds: [dmEmbed] as any });
+  } catch { }
+
   const logEmbed = new EmbedBuilder()
-    .setTitle('\u300C \u2726 ＪＯＩＮ \u2726 \u300D')
+    .setTitle('「 ✦ ＪＯＩＮ ✦ 」')
     .setDescription(`**${member.user.tag}** joined the server.`)
     .setColor(0x2ECC71)
     .setFooter({ text: `ID: ${member.id}` })
@@ -324,10 +335,11 @@ async function handleModal(interaction: any) {
     const verifiedRoleName = formatStaffRoleName('✅', 'Verified');
     const verifyRole = interaction.guild.roles.cache.find((r: any) => r.name === verifiedRoleName);
     if (verifyRole) { try { await interaction.member.roles.add(verifyRole); } catch {} }
+    setPlayerIGN(interaction.user.id, ign);
     await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, flags: MessageFlags.Ephemeral });
 
     const logEmbed = new EmbedBuilder()
-      .setTitle('\u300C \u2726 ＶＥＲＩＦＹ \u2726 \u300D')
+      .setTitle('「 ✦ ＶＥＲＩＦＹ ✦ 」')
       .setDescription(`**${interaction.user.tag}** verified as **${ign}**.`)
       .setColor(0x2ECC71).setTimestamp();
     await logToChannel(interaction.guild, 'verification-logs', logEmbed);
@@ -472,7 +484,62 @@ async function handleApplication(interaction: any, title: string, type: string, 
 
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const app = express();
-app.get('/', (_req, res) => res.json({ status: 'ok', bot: client.user?.tag }));
+app.use(express.static(path.join(process.cwd(), 'website')));
+
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', bot: client.user?.tag }));
+
+app.get('/api/leaderboard', async (_req, res) => {
+  try {
+    const lb = getLeaderboard();
+    const enriched = await Promise.all(lb.slice(0, 100).map(async (p) => {
+      let skinUrl = null;
+      if (p.ign && p.ign !== p.userId) {
+        skinUrl = `https://mc-heads.net/avatar/${p.ign}/64`;
+      }
+      return { ...p, skin: skinUrl };
+    }));
+    res.json(enriched);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/players', async (_req, res) => {
+  try {
+    const guild = client.guilds.cache.first();
+    if (!guild) return res.json([]);
+    await guild.members.fetch();
+    const data = getAllPlayerData();
+    const players = guild.members.cache.map(m => {
+      const pd = data[m.id] || {};
+      const tierRoles: Record<string, string> = {};
+      const tierPattern = /「 ✦ (.+?) (LT|HT) [1-5] ✦ 」/;
+      for (const role of m.roles.cache.values()) {
+        const match = role.name.match(tierPattern);
+        if (match) {
+          const mode = match[1];
+          const tier = `${match[2]} ${match[3] || ''}`.trim();
+          if (!tierRoles[mode] || compareTier(tier, tierRoles[mode]) > 0) {
+            tierRoles[mode] = tier;
+          }
+        }
+      }
+      return {
+        id: m.id,
+        name: m.user.username,
+        ign: pd.ign || m.user.username,
+        roles: tierRoles,
+        totalPoints: pd.points || 0,
+        skin: pd.ign ? `https://mc-heads.net/avatar/${pd.ign}/64` : null,
+      };
+    });
+    res.json(players);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+function compareTier(a: string, b: string) {
+  const order = ['LT 1', 'HT 1', 'LT 2', 'HT 2', 'LT 3', 'HT 3', 'LT 4', 'HT 4', 'LT 5', 'HT 5'];
+  return order.indexOf(a) - order.indexOf(b);
+}
+
 app.listen(PORT, () => console.log(`🌐 Health check server on port ${PORT}`));
 
 if (!DISCORD_TOKEN) {

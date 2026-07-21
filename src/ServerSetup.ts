@@ -217,26 +217,80 @@ export class ServerSetup {
     if (welcome) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＨＡＲＶＡＬ ＭＣ ✦ 」')
-        .setDescription('### 🏰 PvP Tier Testing Network\n\n👋 **Welcome to HARVAL MC!**\n\nThe ultimate Minecraft PvP Tier Testing server.\n\n**Getting Started:**\n• 📜 Read the rules in <#rules>\n• ✅ Verify in <#verify>\n• ⚔️ Request a tier test in <#request-tier-test>\n• 🎫 Open a support ticket in <#create-ticket>\n\n> **Server IP:** `play.harvalmc.fun`')
-        .setColor(0xFFD700).setFooter({ text: '✦ HARVAL MC ✦' }).setTimestamp();
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *The Ultimate Minecraft PvP Tier Testing Network*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '**╔═══════════════╗**\n' +
+          '║  GETTING STARTED  ║\n' +
+          '**╚═══════════════╝**\n\n' +
+          '📜 **Step 1** — Read the rules below\n' +
+          '✅ **Step 2** — Verify your account\n' +
+          '⚔️ **Step 3** — Request a tier test\n' +
+          '🎫 **Step 4** — Open a ticket if you need help\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '**Server IP:** `play.harvalmc.fun`\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0xFFD700)
+        .setThumbnail('https://cdn.discordapp.com/embed/avatars/0.png')
+        .setFooter({ text: '✦ HARVAL MC ✦ | Competitive PvP' })
+        .setTimestamp();
       await welcome.send({ embeds: [e] as any }).catch(() => {});
     }
 
     // ── Rules ──
     if (rules) {
-      const e = new EmbedBuilder()
+      const e1 = new EmbedBuilder()
         .setTitle('「 ✦ ＲＵＬＥＳ ✦ 」')
-        .setDescription('### 📜 Server Rules\n\n**1. Be Respectful** — No harassment, toxicity, or discrimination.\n**2. No Cheating** — No hacked clients, macros, or unfair advantages.\n**3. Follow Staff** — Staff decisions are final.\n**4. No Spam** — No excessive messages, pings, or ads.\n**5. English Only** — Keep chat in English in public channels.\n**6. No Bug Abuse** — Report bugs to staff immediately.\n**7. Appropriate** — No NSFW, slurs, or offensive content.\n**8. Have Fun!** — This is a competitive but friendly community.')
-        .setColor(0xE74C3C).setFooter({ text: '✦ RULES ✦ ┃ Updated regularly' }).setTimestamp();
-      await rules.send({ embeds: [e] as any }).catch(() => {});
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *Follow these rules to keep the community fair and fun*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0xE74C3C)
+        .setFooter({ text: '✦ RULES ✦ | Updated regularly' })
+        .setTimestamp();
+      const e2 = new EmbedBuilder()
+        .setDescription(
+          '**` 1. `** **Be Respectful**\n' +
+          '> No harassment, toxicity, hate speech, or discrimination.\n\n' +
+          '**` 2. `** **No Cheating**\n' +
+          '> Hacked clients, macros, or unfair advantages are banned.\n\n' +
+          '**` 3. `** **Follow Staff**\n' +
+          '> Staff decisions are final. Respect all staff members.\n\n' +
+          '**` 4. `** **No Spam**\n' +
+          '> No excessive messages, pings, or advertisements.\n\n' +
+          '**` 5. `** **English Only**\n' +
+          '> Keep public chat in English for moderation purposes.\n\n' +
+          '**` 6. `** **No Bug Abuse**\n' +
+          '> Report bugs to staff. Do not exploit them.\n\n' +
+          '**` 7. `** **Keep It Clean**\n' +
+          '> No NSFW, slurs, or offensive content of any kind.\n\n' +
+          '**` 8. `** **Have Fun!**\n' +
+          '> This is a competitive but friendly community — enjoy!')
+        .setColor(0xE74C3C);
+      await rules.send({ embeds: [e1, e2] as any }).catch(() => {});
     }
 
     // ── FAQ ──
     if (faq) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＦＡＱ ✦ 」')
-        .setDescription('### ❓ Frequently Asked Questions\n\n**Q: How does tier testing work?**\nA: Request a test in <#request-tier-test>. A tester will claim your ticket and test you in your chosen mode.\n\n**Q: What tiers are there?**\nA: LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5 (10 tiers per mode)\n\n**Q: How do I become a tier tester?**\nA: Apply using the tester application form.\n\n**Q: What if I need help?**\nA: Open a ticket in <#create-ticket>.\n\n**Q: What is the server IP?**\nA: `play.harvalmc.fun`')
-        .setColor(0x3498DB).setFooter({ text: '✦ FAQ ✦ ┃ Updated regularly' }).setTimestamp();
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *Answers to common questions*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '**❓ How does tier testing work?**\n' +
+          '> Request a test in <#request-tier-test>. A tester claims your ticket and assesses your skill in your chosen mode.\n\n' +
+          '**❓ What tiers exist?**\n' +
+          '> `LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5`\n' +
+          '> *(10 tiers per mode)*\n\n' +
+          '**❓ How do I become a tier tester?**\n' +
+          '> Apply using the Tier Tester Application form below.\n\n' +
+          '**❓ How do I get help?**\n' +
+          '> Open a support ticket and staff will assist you.\n\n' +
+          '**❓ What is the server IP?**\n' +
+          '> `play.harvalmc.fun`\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0x3498DB)
+        .setFooter({ text: '✦ FAQ ✦ | Updated regularly' })
+        .setTimestamp();
       await faq.send({ embeds: [e] as any }).catch(() => {});
     }
 
@@ -244,10 +298,17 @@ export class ServerSetup {
     if (verify) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＶＥＲＩＦＹ ✦ 」')
-        .setDescription('### ✅ Verification\n\nClick the button below to verify your account.\nYou will be asked for your Minecraft IGN (in-game name).')
-        .setColor(0x2ECC71).setFooter({ text: '✦ VERIFY ✦' }).setTimestamp();
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *Verify your account to access the server*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          'Click the button below to verify.\n' +
+          'You will be asked for your Minecraft IGN.\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0x2ECC71)
+        .setFooter({ text: '✦ VERIFY ✦ | One-time verification' })
+        .setTimestamp();
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('verify_button').setLabel('✅ Verify').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('verify_button').setLabel('Verify Now').setStyle(ButtonStyle.Success).setEmoji('✅'),
       );
       await verify.send({ embeds: [e] as any, components: [row as any] }).catch(() => {});
     }
@@ -256,10 +317,22 @@ export class ServerSetup {
     if (rtt) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＴＩＥＲ ＴＥＳＴ ✦ 」')
-        .setDescription('### ⚔️ Request Tier Test\n\nClick the button below to request a tier test.\nA ticket will be created where a tester will assess your skills.\n\n**Available Modes:** Sword, Crystal, UHC, Boxing, Gapple, NoDebuff, Combo, Axe, Bedwars, Skywars, Bridge, and more.\n\n**Tiers:** LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5')
-        .setColor(0xE67E22).setFooter({ text: '✦ TIER TEST ✦' }).setTimestamp();
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *Request a tier test to rank up in your chosen mode*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          'Click the button below to start your tier test.\n' +
+          'A ticket will be created where a tester will assess you.\n\n' +
+          '**Available Modes:**\n' +
+          'Sword | Crystal | UHC | Boxing | Gapple | NoDebuff\n' +
+          'Combo | Axe | Bedwars | Skywars | Bridge | And more\n\n' +
+          '**Tier Progression:**\n' +
+          '`LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5`\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0xE67E22)
+        .setFooter({ text: '✦ TIER TEST ✦ | Prove your skill' })
+        .setTimestamp();
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('request_tier_test').setLabel('⚔️ Request Tier Test').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('request_tier_test').setLabel('Request Tier Test').setStyle(ButtonStyle.Primary).setEmoji('⚔️'),
       );
       await rtt.send({ embeds: [e] as any, components: [row as any] }).catch(() => {});
     }
@@ -268,20 +341,36 @@ export class ServerSetup {
     if (queue) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＱＵＥＵＥ ✦ 」')
-        .setDescription('### ⏳ Tier Test Queue\n\nActive tier test tickets will appear here.\n\n⚔️ **Current Queue:**\n> No active tests in queue.\n\nWhen a ticket is claimed, it will be removed from this queue.')
-        .setColor(0xF1C40F).setFooter({ text: '✦ QUEUE ✦ ┃ Updates automatically' }).setTimestamp();
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *Active tier test tickets appear here*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '**Current Queue:**\n' +
+          '> No active tests in queue.\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0xF1C40F)
+        .setFooter({ text: '✦ QUEUE ✦ | Updates automatically' })
+        .setTimestamp();
       await queue.send({ embeds: [e] as any }).catch(() => {});
     }
 
-    // ── Roles & Applications ──
+    // ── Applications ──
     if (roles) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＡＰＰＬＩＣＡＴＩＯＮＳ ✦ 」')
-        .setDescription('### 🎨 Applications\n\n**📝 Staff Application** — Join the staff team.\n**⚔️ Tier Tester Application** — Become a certified tier tester.')
-        .setColor(0x9B59B6).setFooter({ text: '✦ APPLICATIONS ✦' }).setTimestamp();
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *Join the team or become a certified tier tester*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '**📝 Staff Application**\n' +
+          '> Join the staff team and help manage the server.\n\n' +
+          '**⚔️ Tier Tester Application**\n' +
+          '> Become a certified tier tester and assess players.\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0x9B59B6)
+        .setFooter({ text: '✦ APPLICATIONS ✦ | Apply today' })
+        .setTimestamp();
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('staff_apply').setLabel('📝 Staff Apply').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('tester_apply').setLabel('⚔️ Tester Apply').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('staff_apply').setLabel('Staff Apply').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
+        new ButtonBuilder().setCustomId('tester_apply').setLabel('Tester Apply').setStyle(ButtonStyle.Secondary).setEmoji('⚔️'),
       );
       await roles.send({ embeds: [e] as any, components: [row as any] }).catch(() => {});
     }
@@ -290,10 +379,21 @@ export class ServerSetup {
     if (staff) {
       const e = new EmbedBuilder()
         .setTitle('「 ✦ ＳＵＰＰＯＲＴ ✦ 」')
-        .setDescription('### 👥 Staff & Support\n\nNeed help? Open a support ticket and a staff member will assist you.\n\n**Available for:**\n• General questions\n• Bug reports\n• Player reports\n• Appeal bans/mutes\n• Technical issues')
-        .setColor(0xF1C40F).setFooter({ text: '✦ SUPPORT ✦' }).setTimestamp();
+        .setDescription('━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '> *Need help? Open a ticket and staff will assist you*\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '**Available for:**\n' +
+          '• General questions and inquiries\n' +
+          '• Bug reports and technical issues\n' +
+          '• Player reports and evidence submission\n' +
+          '• Ban or mute appeals\n' +
+          '• Suggestions and feedback\n\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━')
+        .setColor(0xF1C40F)
+        .setFooter({ text: '✦ SUPPORT ✦ | We are here to help' })
+        .setTimestamp();
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('support_ticket').setLabel('🎫 Open Support Ticket').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('support_ticket').setLabel('Open Support Ticket').setStyle(ButtonStyle.Danger).setEmoji('🎫'),
       );
       await staff.send({ embeds: [e] as any, components: [row as any] }).catch(() => {});
     }

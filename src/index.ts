@@ -504,60 +504,21 @@ async function handleApplication(interaction: any, title: string, type: string, 
 
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const app = express();
-app.use(express.json());
-
-function getKitMapping(): Record<string, string> {
-  return {
-    overall: '', sword: 'Sword', axe: 'Axe', pot: 'Netherite Pot',
-    vanilla: 'Vanilla', uhc: 'UHC', smp: 'SMP Pot', build: 'BuildUHC',
-    parkour: '', events: '',
-  };
-}
-
-function compareTier(a: string, b: string) {
-  const order = ['LT 1', 'HT 1', 'LT 2', 'HT 2', 'LT 3', 'HT 3', 'LT 4', 'HT 4', 'LT 5', 'HT 5'];
-  return order.indexOf(a) - order.indexOf(b);
-}
-
-function getPlayerTiers(member: any): Record<string, string> {
-  const tiers: Record<string, string> = {};
-  const pattern = /「 ✦ (.+?) (LT|HT [1-5]) ✦ 」/;
-  for (const role of member.roles.cache.values()) {
-    const m = role.name.match(pattern);
-    if (m) {
-      const mode = m[1];
-      if (!tiers[mode] || compareTier(m[2], tiers[mode]) > 0) {
-        tiers[mode] = m[2];
-      }
-    }
-  }
-  return tiers;
-}
+app.use(express.static(path.join(process.cwd(), 'website')));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', bot: client.user?.tag }));
 
-app.get('/api/leaderboard/:kit', async (req, res) => {
+app.get('/api/leaderboard', async (_req, res) => {
   try {
-    const kit = req.params.kit || 'overall';
-    const modeName = getKitMapping()[kit];
     const lb = getLeaderboard();
-
-    const entries = lb.slice(0, 100).map((p, i) => {
-      const data = getAllPlayerData();
-      const pd = data[p.userId];
-      let pts = (pd?.points || 0);
-      return {
-        place: i + 1,
-        username: p.ign,
-        discriminator: '0000',
-        points: pts,
-        tier: pts >= 10000 ? 'Grandmaster' : pts >= 5000 ? 'Master' : pts >= 2500 ? 'Diamond' : pts >= 1000 ? 'Platinum' : pts >= 500 ? 'Gold' : pts >= 100 ? 'Silver' : 'Bronze',
-        status: 'Online',
-        avatar: p.ign && p.ign !== p.userId ? `https://mc-heads.net/avatar/${p.ign}/100` : undefined,
-      };
-    });
-
-    res.json(entries);
+    const enriched = await Promise.all(lb.slice(0, 100).map(async (p) => {
+      let skinUrl = null;
+      if (p.ign && p.ign !== p.userId) {
+        skinUrl = `https://mc-heads.net/avatar/${p.ign}/64`;
+      }
+      return { ...p, skin: skinUrl };
+    }));
+    res.json(enriched);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -567,119 +528,37 @@ app.get('/api/players', async (_req, res) => {
     if (!guild) return res.json([]);
     await guild.members.fetch();
     const data = getAllPlayerData();
-
     const players = guild.members.cache.map(m => {
-      const pd = data[m.id] || { points: 0, modes: {} };
-      const tierRoles = getPlayerTiers(m);
-      const ign = pd.ign || m.user.username;
-      const pts = pd.points || 0;
-
+      const pd = data[m.id] || {};
+      const tierRoles: Record<string, string> = {};
+      const tierPattern = /「 ✦ (.+?) (LT|HT) [1-5] ✦ 」/;
+      for (const role of m.roles.cache.values()) {
+        const match = role.name.match(tierPattern);
+        if (match) {
+          const mode = match[1];
+          const tier = `${match[2]} ${match[3] || ''}`.trim();
+          if (!tierRoles[mode] || compareTier(tier, tierRoles[mode]) > 0) {
+            tierRoles[mode] = tier;
+          }
+        }
+      }
       return {
         id: m.id,
-        username: ign,
-        discordId: m.id,
-        discriminator: m.user.discriminator || '0000',
-        points: pts,
-        tier: pts >= 10000 ? 'Grandmaster' : pts >= 5000 ? 'Master' : pts >= 2500 ? 'Diamond' : pts >= 1000 ? 'Platinum' : pts >= 500 ? 'Gold' : pts >= 100 ? 'Silver' : 'Bronze',
-        roles: Object.values(tierRoles).filter(Boolean),
-        avatar: `https://mc-heads.net/avatar/${ign}/100`,
-        status: m.presence?.status === 'online' ? 'Online' : m.presence?.status === 'idle' ? 'Online' : 'Offline',
-        joinDate: m.joinedAt?.toISOString() || '',
-        lastActive: m.presence?.status === 'online' ? 'Just now' : 'Offline',
-        weeklyPoints: Math.round(pts * 0.1),
-        monthlyPoints: Math.round(pts * 0.4),
-        totalPoints: pts,
-        stats: Object.fromEntries(
-          Object.entries(pd.modes || {}).map(([mode, tier]) => [mode.toLowerCase().replace(/\s+/g, ''), { points: pts, rank: 1, tier }])
-        ),
-        recentActivity: [],
+        name: m.user.username,
+        ign: pd.ign || m.user.username,
+        roles: tierRoles,
+        totalPoints: pd.points || 0,
+        skin: pd.ign ? `https://mc-heads.net/avatar/${pd.ign}/64` : null,
       };
     });
-
     res.json(players);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/players/:name', async (req, res) => {
-  try {
-    const guild = client.guilds.cache.first();
-    if (!guild) return res.status(404).json({ error: 'Not found' });
-    await guild.members.fetch();
-    const data = getAllPlayerData();
-    const name = req.params.name.toLowerCase();
-
-    const member = guild.members.cache.find((m: any) => {
-      const pd = data[m.id];
-      const ign = (pd?.ign || m.user.username).toLowerCase();
-      return ign === name || m.user.username.toLowerCase() === name;
-    });
-
-    if (!member) return res.status(404).json({ error: 'Player not found' });
-
-    const pd = data[member.id] || { points: 0, modes: {} };
-    const ign = pd.ign || member.user.username;
-    const pts = pd.points || 0;
-
-    res.json({
-      id: member.id,
-      username: ign,
-      discordId: member.id,
-      discriminator: member.user.discriminator || '0000',
-      points: pts,
-      tier: pts >= 10000 ? 'Grandmaster' : pts >= 5000 ? 'Master' : pts >= 2500 ? 'Diamond' : pts >= 1000 ? 'Platinum' : pts >= 500 ? 'Gold' : pts >= 100 ? 'Silver' : 'Bronze',
-      roles: Object.values(getPlayerTiers(member)).filter(Boolean),
-      avatar: `https://mc-heads.net/avatar/${ign}/100`,
-      status: member.presence?.status === 'online' ? 'Online' : 'Offline',
-      joinDate: member.joinedAt?.toISOString() || '',
-      lastActive: member.presence?.status === 'online' ? 'Just now' : 'Offline',
-      weeklyPoints: Math.round(pts * 0.1),
-      monthlyPoints: Math.round(pts * 0.4),
-      totalPoints: pts,
-      stats: Object.fromEntries(
-        Object.entries(pd.modes || {}).map(([mode, tier]) => [mode.toLowerCase().replace(/\s+/g, ''), { points: pts, rank: 1, tier }])
-      ),
-      recentActivity: [],
-    });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/staff', async (_req, res) => {
-  try {
-    const guild = client.guilds.cache.first();
-    if (!guild) return res.json([]);
-    const staffPattern = /^(👑|⚡|🌐|🛡️|🔰|⚔️|💎|🔨|🎬)/;
-    const members = guild.members.cache.filter((m: any) => m.roles.cache.some((r: any) => staffPattern.test(r.name)));
-    const staffList = members.map((m: any) => {
-      const staffRole = m.roles.cache.find((r: any) => staffPattern.test(r.name));
-      return {
-        name: m.user.username,
-        role: staffRole?.name.replace(/^[^\w]*/, '').replace(/[「 」✦]/g, '').trim() || 'Staff',
-        focus: 'Server management',
-        avatar: `https://mc-heads.net/avatar/${m.user.username}/100`,
-        discord: `${m.user.username}#${m.user.discriminator || '0000'}`,
-      };
-    });
-    res.json(staffList.slice(0, 20));
-  } catch { res.json([]); }
-});
-
-app.get('/api/news', (_req, res) => {
-  res.json([
-    { title: 'HARVAL MC Season 2 Live', blurb: 'New points system, tier testing, and leaderboards are now active.', date: new Date().toISOString().split('T')[0], category: 'Announcement' },
-    { title: 'Tier Testing Open', blurb: 'Request your tier test in Discord. Prove your skill across 20 PvP modes.', date: new Date().toISOString().split('T')[0], category: 'Updates' },
-  ]);
-});
-
-app.get('/api/stats', (_req, res) => {
-  const guild = client.guilds.cache.first();
-  res.json({
-    name: 'Harval MC',
-    ip: 'play.harvalmc.fun',
-    version: '1.20.x - 1.21.x',
-    members: guild?.memberCount?.toString() || '0',
-    online: guild?.members.cache.filter(m => m.presence?.status === 'online').size.toString() || '0',
-  });
-});
+function compareTier(a: string, b: string) {
+  const order = ['LT 1', 'HT 1', 'LT 2', 'HT 2', 'LT 3', 'HT 3', 'LT 4', 'HT 4', 'LT 5', 'HT 5'];
+  return order.indexOf(a) - order.indexOf(b);
+}
 
 app.listen(PORT, () => console.log(`🌐 Health check server on port ${PORT}`));
 

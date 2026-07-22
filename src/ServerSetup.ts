@@ -1,5 +1,7 @@
 import { Guild, ChannelType, TextChannel, CategoryChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
 import { logger } from './utils/Logger';
+import { ALL_ROLES } from './roles';
+import { createRole } from './utils/roleCreator';
 import { catName, channelName, panel, SEP } from './utils/textStyles';
 
 export const CATEGORIES: { key: string; name: string }[] = [
@@ -162,7 +164,29 @@ export class ServerSetup {
     logger.info(`══════════ /all START ══════════`);
     await this.setupCategories();
     await this.setupChannels();
-    logger.info('══════════ /all DONE (roles: run /makeroles separately) ══════════');
+
+    const start = Date.now();
+    let done = 0;
+    let failed = 0;
+    try { await this.guild.roles.fetch(); } catch {}
+    const existing = new Set(this.guild.roles.cache.map(r => r.name));
+
+    for (let i = 0; i < ALL_ROLES.length; i++) {
+      if (Date.now() - start > 600000) { logger.warn('⏰ Timeout'); break; }
+      const r = ALL_ROLES[i];
+      if (existing.has(r.name)) { done++; continue; }
+      try {
+        await createRole(this.guild, r.name, r.color);
+        done++;
+        if (done % 50 === 0 || done === ALL_ROLES.length) logger.info(`  [${done}/${ALL_ROLES.length}] roles`);
+        await this.sleep(2000);
+      } catch (e: any) {
+        failed++;
+        logger.error(`  FAIL ${r.name}: ${e?.message || e?.status || '?'}`);
+        await this.sleep(3000);
+      }
+    }
+    logger.info(`══════════ /all DONE (${done} roles, ${((Date.now()-start)/1000).toFixed(0)}s) ══════════`);
   }
 
   async cleanupChannels(): Promise<number> {

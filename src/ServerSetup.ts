@@ -217,6 +217,7 @@ export class ServerSetup {
 
     if (welcome) {
       const e = new EmbedBuilder()
+<<<<<<< HEAD
         .setTitle('HARVAL MC')
         .setDescription(
           'Welcome to **HARVAL MC** — the ultimate Minecraft PvP tier testing network.\n\n' +
@@ -254,10 +255,26 @@ export class ServerSetup {
         )
         .setColor(0xE74C3C);
       await rules.send({ embeds: [e] }).catch(() => {});
+=======
+        .setTitle('「 ✦ ＨＡＲＶＡＬ ＭＣ ✦ 」')
+        .setDescription('### 🏰 PvP Tier Testing Network\n\n👋 **Welcome to HARVAL MC!**\n\nThe ultimate Minecraft PvP Tier Testing server.\n\n**Getting Started:**\n• 📜 Read the rules in <#rules>\n• ✅ Verify in <#verify>\n• ⚔️ Request a tier test in <#request-tier-test>\n• 🎫 Open a support ticket in <#create-ticket>\n\n> **Server IP:** `play.harvalmc.fun`')
+        .setColor(0xFFD700).setFooter({ text: '✦ HARVAL MC ✦' }).setTimestamp();
+      await welcome.send({ embeds: [e] as any }).catch(() => {});
+    }
+
+    // ── Rules ──
+    if (rules) {
+      const e = new EmbedBuilder()
+        .setTitle('「 ✦ ＲＵＬＥＳ ✦ 」')
+        .setDescription('### 📜 Server Rules\n\n**1. Be Respectful** — No harassment, toxicity, or discrimination.\n**2. No Cheating** — No hacked clients, macros, or unfair advantages.\n**3. Follow Staff** — Staff decisions are final.\n**4. No Spam** — No excessive messages, pings, or ads.\n**5. English Only** — Keep chat in English in public channels.\n**6. No Bug Abuse** — Report bugs to staff immediately.\n**7. Appropriate** — No NSFW, slurs, or offensive content.\n**8. Have Fun!** — This is a competitive but friendly community.')
+        .setColor(0xE74C3C).setFooter({ text: '✦ RULES ✦ ┃ Updated regularly' }).setTimestamp();
+      await rules.send({ embeds: [e] as any }).catch(() => {});
+>>>>>>> parent of dc72afb (sdf)
     }
 
     if (faq) {
       const e = new EmbedBuilder()
+<<<<<<< HEAD
         .setTitle('FAQ')
         .setDescription(
           '**How does tier testing work?**\n' +
@@ -273,21 +290,34 @@ export class ServerSetup {
         )
         .setColor(0x3498DB);
       await faq.send({ embeds: [e] }).catch(() => {});
+=======
+        .setTitle('「 ✦ ＦＡＱ ✦ 」')
+        .setDescription('### ❓ Frequently Asked Questions\n\n**Q: How does tier testing work?**\nA: Request a test in <#request-tier-test>. A tester will claim your ticket and test you in your chosen mode.\n\n**Q: What tiers are there?**\nA: LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5 (10 tiers per mode)\n\n**Q: How do I become a tier tester?**\nA: Apply using the tester application form.\n\n**Q: What if I need help?**\nA: Open a ticket in <#create-ticket>.\n\n**Q: What is the server IP?**\nA: `play.harvalmc.fun`')
+        .setColor(0x3498DB).setFooter({ text: '✦ FAQ ✦ ┃ Updated regularly' }).setTimestamp();
+      await faq.send({ embeds: [e] as any }).catch(() => {});
+>>>>>>> parent of dc72afb (sdf)
     }
 
     if (verify) {
       const e = new EmbedBuilder()
+<<<<<<< HEAD
         .setTitle('Verify')
         .setDescription('Click the button below to verify your account. You will be asked for your Minecraft IGN.')
         .setColor(0x2ECC71);
+=======
+        .setTitle('「 ✦ ＶＥＲＩＦＹ ✦ 」')
+        .setDescription('### ✅ Verification\n\nClick the button below to verify your account.\nYou will be asked for your Minecraft IGN (in-game name).')
+        .setColor(0x2ECC71).setFooter({ text: '✦ VERIFY ✦' }).setTimestamp();
+>>>>>>> parent of dc72afb (sdf)
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('verify_button').setLabel('Verify Now').setStyle(ButtonStyle.Success).setEmoji('✅'),
+        new ButtonBuilder().setCustomId('verify_button').setLabel('✅ Verify').setStyle(ButtonStyle.Success),
       );
       await verify.send({ embeds: [e], components: [row] }).catch(() => {});
     }
 
     if (rtt) {
       const e = new EmbedBuilder()
+<<<<<<< HEAD
         .setTitle('Tier Test')
         .setDescription(
           'Click the button below to start your tier test. A ticket will be created where a tester will assess you.\n\n' +
@@ -297,14 +327,20 @@ export class ServerSetup {
           'LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5'
         )
         .setColor(0xE67E22);
+=======
+        .setTitle('「 ✦ ＴＩＥＲ ＴＥＳＴ ✦ 」')
+        .setDescription('### ⚔️ Request Tier Test\n\nClick the button below to request a tier test.\nA ticket will be created where a tester will assess your skills.\n\n**Available Modes:** Sword, Crystal, UHC, Boxing, Gapple, NoDebuff, Combo, Axe, Bedwars, Skywars, Bridge, and more.\n\n**Tiers:** LT 1 → HT 1 → LT 2 → HT 2 → LT 3 → HT 3 → LT 4 → HT 4 → LT 5 → HT 5')
+        .setColor(0xE67E22).setFooter({ text: '✦ TIER TEST ✦' }).setTimestamp();
+>>>>>>> parent of dc72afb (sdf)
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('request_tier_test').setLabel('Request Tier Test').setStyle(ButtonStyle.Primary).setEmoji('⚔️'),
+        new ButtonBuilder().setCustomId('request_tier_test').setLabel('⚔️ Request Tier Test').setStyle(ButtonStyle.Primary),
       );
       await rtt.send({ embeds: [e], components: [row] }).catch(() => {});
     }
 
     if (queue) {
       const e = new EmbedBuilder()
+<<<<<<< HEAD
         .setTitle('Queue')
         .setDescription('**Current Queue:**\nNo active tests in queue.')
         .setColor(0xF1C40F);
@@ -321,15 +357,30 @@ export class ServerSetup {
           'Become a certified tier tester and assess players.'
         )
         .setColor(0x9B59B6);
+=======
+        .setTitle('「 ✦ ＱＵＥＵＥ ✦ 」')
+        .setDescription('### ⏳ Tier Test Queue\n\nActive tier test tickets will appear here.\n\n⚔️ **Current Queue:**\n> No active tests in queue.\n\nWhen a ticket is claimed, it will be removed from this queue.')
+        .setColor(0xF1C40F).setFooter({ text: '✦ QUEUE ✦ ┃ Updates automatically' }).setTimestamp();
+      await queue.send({ embeds: [e] as any }).catch(() => {});
+    }
+
+    // ── Roles & Applications ──
+    if (roles) {
+      const e = new EmbedBuilder()
+        .setTitle('「 ✦ ＡＰＰＬＩＣＡＴＩＯＮＳ ✦ 」')
+        .setDescription('### 🎨 Applications\n\n**📝 Staff Application** — Join the staff team.\n**⚔️ Tier Tester Application** — Become a certified tier tester.')
+        .setColor(0x9B59B6).setFooter({ text: '✦ APPLICATIONS ✦' }).setTimestamp();
+>>>>>>> parent of dc72afb (sdf)
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('staff_apply').setLabel('Staff Apply').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
-        new ButtonBuilder().setCustomId('tester_apply').setLabel('Tester Apply').setStyle(ButtonStyle.Secondary).setEmoji('⚔️'),
+        new ButtonBuilder().setCustomId('staff_apply').setLabel('📝 Staff Apply').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('tester_apply').setLabel('⚔️ Tester Apply').setStyle(ButtonStyle.Secondary),
       );
       await roles.send({ embeds: [e], components: [row] }).catch(() => {});
     }
 
     if (staff) {
       const e = new EmbedBuilder()
+<<<<<<< HEAD
         .setTitle('Support')
         .setDescription(
           'Need help? Open a ticket and staff will assist you.\n\n' +
@@ -341,8 +392,13 @@ export class ServerSetup {
           '• Suggestions and feedback'
         )
         .setColor(0xF1C40F);
+=======
+        .setTitle('「 ✦ ＳＵＰＰＯＲＴ ✦ 」')
+        .setDescription('### 👥 Staff & Support\n\nNeed help? Open a support ticket and a staff member will assist you.\n\n**Available for:**\n• General questions\n• Bug reports\n• Player reports\n• Appeal bans/mutes\n• Technical issues')
+        .setColor(0xF1C40F).setFooter({ text: '✦ SUPPORT ✦' }).setTimestamp();
+>>>>>>> parent of dc72afb (sdf)
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId('support_ticket').setLabel('Open Support Ticket').setStyle(ButtonStyle.Danger).setEmoji('🎫'),
+        new ButtonBuilder().setCustomId('support_ticket').setLabel('🎫 Open Support Ticket').setStyle(ButtonStyle.Danger),
       );
       await staff.send({ embeds: [e], components: [row] }).catch(() => {});
     }

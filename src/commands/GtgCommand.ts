@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ALL_ROLES, STAFF_EMOJI_PREFIX, MODES, TIERS } from '../roles';
 import { formatRoleName } from '../utils/textStyles';
-import { addTierPoints, POINT_MODES, TIER_POINTS } from '../utils/pointsSystem';
 import { createRole } from '../utils/roleCreator';
 
 const gtgState = new Map<string, { guildId: string; idx: number }>();
@@ -39,8 +38,6 @@ export class GtgCommand {
       await this.handleList(interaction);
     } else if (sub === 'mode') {
       await this.handleMode(interaction);
-    } else if (sub === 'give') {
-      await this.handleGive(interaction);
     } else {
       await this.handleGtg(interaction);
     }
@@ -239,64 +236,6 @@ export class GtgCommand {
     await interaction.editReply({ content: null, embeds: [embed] as any });
   }
 
-  private async handleGive(interaction: ChatInputCommandInteraction) {
-    if (!isStaff(interaction.member)) {
-      await interaction.reply({ content: '❌ Staff only.', flags: MessageFlags.Ephemeral });
-      return;
-    }
-
-    const user = interaction.options.getUser('user', true);
-    const mode = interaction.options.getString('mode', true);
-    const tier = interaction.options.getString('tier', true);
-    const tierLabel = `${tier.toUpperCase().includes('LT') ? 'LT' : 'HT'} ${tier.replace(/[^0-9]/g, '')}`;
-
-    if (!MODES.includes(mode)) {
-      await interaction.reply({ content: `❌ Invalid mode. Available: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral });
-      return;
-    }
-
-    const validTiers = TIERS.map(t => t.name);
-    if (!validTiers.includes(tierLabel)) {
-      await interaction.reply({ content: `❌ Invalid tier. Use: ${validTiers.join(', ')}`, flags: MessageFlags.Ephemeral });
-      return;
-    }
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    const guild = interaction.guild!;
-    const member = await guild.members.fetch(user.id).catch(() => null);
-    if (!member) {
-      await interaction.editReply({ content: '❌ User not found in this server.' });
-      return;
-    }
-
-    const roleName = formatRoleName(`${mode} ${tierLabel}`);
-    let role = guild.roles.cache.find((r: any) => r.name === roleName);
-    if (!role) {
-      try {
-        const tierData = TIERS.find(t => t.name === tierLabel)!;
-        role = await guild.roles.create({ name: roleName, colors: { primaryColor: tierData.color }, hoist: false, mentionable: false, reason: `GTG give by ${interaction.user.tag}` });
-      } catch (e: any) {
-        await interaction.editReply({ content: `❌ Failed to create role: ${e.message}` });
-        return;
-      }
-    }
-
-    try {
-      await member.roles.add(role);
-      if (POINT_MODES.includes(mode) && TIER_POINTS[tierLabel]) {
-        addTierPoints(user.id, mode, tierLabel, user.displayName);
-      }
-      const embed = new EmbedBuilder()
-        .setTitle('✅ Role Given')
-        .setDescription(`**${user}** received **${roleName}**`)
-        .setColor(0x2ECC71).setTimestamp();
-      await interaction.editReply({ embeds: [embed] as any });
-    } catch (e: any) {
-      await interaction.editReply({ content: `❌ Failed to give role: ${e.message}` });
-    }
-  }
-
   static async handleButton(interaction: any) {
     if (!interaction.customId.startsWith('gtg_create_')) return;
 
@@ -415,12 +354,6 @@ export class GtgCommand {
         .setName('mode')
         .setDescription('Create all 10 tiers for a specific PvP mode')
         .addStringOption(opt => opt.setName('mode').setDescription('PvP mode name').setRequired(true).setAutocomplete(true)))
-      .addSubcommand(sub => sub
-        .setName('give')
-        .setDescription('Give a tier role to a user')
-        .addUserOption(opt => opt.setName('user').setDescription('User to give the role to').setRequired(true))
-        .addStringOption(opt => opt.setName('mode').setDescription('PvP mode').setRequired(true).setAutocomplete(true))
-        .addStringOption(opt => opt.setName('tier').setDescription('Tier (e.g. HT 1, LT 5)').setRequired(true)))
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
       .setDMPermission(false);
   }

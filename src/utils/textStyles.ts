@@ -1,31 +1,39 @@
-const BOLD_MAP: Record<string, string> = {
-  'A': '\u{1D400}', 'B': '\u{1D401}', 'C': '\u{1D402}', 'D': '\u{1D403}',
-  'E': '\u{1D404}', 'F': '\u{1D405}', 'G': '\u{1D406}', 'H': '\u{1D407}',
-  'I': '\u{1D408}', 'J': '\u{1D409}', 'K': '\u{1D40A}', 'L': '\u{1D40B}',
-  'M': '\u{1D40C}', 'N': '\u{1D40D}', 'O': '\u{1D40E}', 'P': '\u{1D40F}',
-  'Q': '\u{1D410}', 'R': '\u{1D411}', 'S': '\u{1D412}', 'T': '\u{1D413}',
-  'U': '\u{1D414}', 'V': '\u{1D415}', 'W': '\u{1D416}', 'X': '\u{1D417}',
-  'Y': '\u{1D418}', 'Z': '\u{1D419}',
-  'a': '\u{1D41A}', 'b': '\u{1D41B}', 'c': '\u{1D41C}', 'd': '\u{1D41D}',
-  'e': '\u{1D41E}', 'f': '\u{1D41F}', 'g': '\u{1D420}', 'h': '\u{1D421}',
-  'i': '\u{1D422}', 'j': '\u{1D423}', 'k': '\u{1D424}', 'l': '\u{1D425}',
-  'm': '\u{1D426}', 'n': '\u{1D427}', 'o': '\u{1D428}', 'p': '\u{1D429}',
-  'q': '\u{1D42A}', 'r': '\u{1D42B}', 's': '\u{1D42C}', 't': '\u{1D42D}',
-  'u': '\u{1D42E}', 'v': '\u{1D42F}', 'w': '\u{1D430}', 'x': '\u{1D431}',
-  'y': '\u{1D432}', 'z': '\u{1D433}',
-  '0': '\u{1D7CE}', '1': '\u{1D7CF}', '2': '\u{1D7D0}', '3': '\u{1D7D1}',
-  '4': '\u{1D7D2}', '5': '\u{1D7D3}', '6': '\u{1D7D4}', '7': '\u{1D7D5}',
-  '8': '\u{1D7D6}', '9': '\u{1D7D7}',
-};
+import { EmbedBuilder } from 'discord.js';
 
-export function toMathBold(text: string): string {
-  return text.split('').map(ch => BOLD_MAP[ch] || ch).join('');
+const S = '\u2501'; // ━
+const D = '\u2501'; // ━
+
+export function roleName(mode: string, tier: string): string {
+  return `\u25C6 ${mode} \u2022 ${tier}`;
 }
 
-export function formatRoleName(text: string): string {
-  return `\u300C \u2726 ${toMathBold(text)} \u2726 \u300D`;
+export function staffRoleName(emoji: string, name: string): string {
+  return `${emoji} \u25C6 ${name}`;
 }
 
-export function formatStaffRoleName(emoji: string, text: string): string {
-  return `${emoji} \u300C \u2726 ${toMathBold(text)} \u2726 \u300D`;
+export function catName(label: string): string {
+  return `${S.repeat(4)} \u3014 ${label.toUpperCase()} \u3015 ${S.repeat(4)}`;
+}
+
+export function channelName(name: string): string {
+  return `\u25C6\u30FB${name}`;
+}
+
+export const SEP = `${S.repeat(30)}`;
+
+export function embedTitle(text: string): string {
+  return `${SEP}\n\u3014 ${text} \u3015\n${SEP}`;
+}
+
+export function panel(title: string, body: string, color: number, footer?: string): EmbedBuilder {
+  const e = new EmbedBuilder()
+    .setDescription(`${SEP}\n\u3014 ${title} \u3015\n${SEP}\n\n${body}\n\n${SEP}`)
+    .setColor(color)
+    .setTimestamp();
+  if (footer) e.setFooter({ text: `\u25C6 ${footer} \u25C6` });
+  return e;
+}
+
+export function field(label: string, value: string): string {
+  return `**${label}**\n${value}`;
 }

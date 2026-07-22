@@ -24,29 +24,28 @@ export class ChannelsCommand {
         return (a as TextChannel).position - (b as TextChannel).position;
       });
 
-    let channelsList = '## 📋 Server Channels\n';
+    let channelsList = '';
     let currentParent = '';
     for (const channel of channels.values()) {
       if (channel.parent?.name !== currentParent) {
         currentParent = channel.parent?.name || '(No category)';
         channelsList += `\n**${currentParent}**\n`;
       }
-      channelsList += `└ ${channel.name}\n`;
+      channelsList += `\u2514 ${channel.name}\n`;
     }
 
     const embed = new EmbedBuilder()
-      .setTitle('\u300C \u2726 ＣＨＡＮＮＥＬＳ \u2726 \u300D')
       .setDescription(channelsList)
       .setColor(0x3498DB)
-      .setFooter({ text: `Total: ${channels.size} channels` })
+      .setFooter({ text: `\u25C6 ${channels.size} channels \u25C6` })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] as any, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   }
 
   private async handleAdd(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-      await interaction.reply({ content: '❌ You need the Manage Channels permission.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'You need Manage Channels permission.', flags: MessageFlags.Ephemeral });
       return;
     }
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -60,38 +59,32 @@ export class ChannelsCommand {
     try {
       catsCreated = await setup.setupCategories();
       chsCreated = await setup.setupChannels();
-      logger.info(`📋 /channels add by ${interaction.user.tag}: ${catsCreated} cats, ${chsCreated} chs`);
+      logger.info(`/channels add by ${interaction.user.tag}: ${catsCreated} cats, ${chsCreated} chs`);
     } catch (e: any) {
-      await interaction.editReply({ content: `❌ Failed: ${e.message}` });
+      await interaction.editReply({ content: `Failed: ${e.message}` });
       return;
     }
 
     const embed = new EmbedBuilder()
-      .setTitle('\u300C \u2726 ＣＨＡＮＮＥＬＳ \u2726 \u300D')
       .setDescription(
         `**Categories Created:** ${catsCreated}\n` +
-        `**Channels Created:** ${chsCreated}\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `> All categories \`「 ✦ ＮＡＭＥ ✦ 」\`\n` +
-        `> Channels with emoji prefixes are ready!`
+        `**Channels Created:** ${chsCreated}\n\n` +
+        `All categories use the \`\u2501 {NAME} \u3015\` format.\n` +
+        `Channels use the \`\u25C6\u30FB{name}\` prefix.`
       )
       .setColor(0x2ECC71)
-      .setFooter({ text: '\u2726 Use /permission to sync \u2726' })
+      .setFooter({ text: '\u25C6 Use /permission to sync \u25C6' })
       .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] as any });
+    await interaction.editReply({ embeds: [embed] });
   }
 
   public get command() {
     return new SlashCommandBuilder()
       .setName('channels')
       .setDescription('Manage server channels')
-      .addSubcommand(sub => sub
-        .setName('list')
-        .setDescription('List all server channels'))
-      .addSubcommand(sub => sub
-        .setName('add')
-        .setDescription('Create all categories and channels with fancy styling'))
+      .addSubcommand(sub => sub.setName('list').setDescription('List all server channels'))
+      .addSubcommand(sub => sub.setName('add').setDescription('Create all categories and channels'))
       .setDMPermission(false);
   }
 }

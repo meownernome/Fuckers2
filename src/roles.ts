@@ -1,10 +1,10 @@
-import { formatRoleName, formatStaffRoleName } from './utils/textStyles';
+import { roleName, staffRoleName } from './utils/textStyles';
 
 export const MODES = [
   'Sword', 'Crystal', 'SMP', 'Netherite Pot', 'Diamond Pot',
-  'UHC', 'BuildUHC', 'NoDebuff', 'Combo', 'Gapple',
-  'OP Duel', 'Boxing', 'Axe', 'Bedwars', 'Skywars',
-  'Bridge', 'Nodebuff', 'Vanilla', 'Shield', 'Custom Duel',
+  'BuildUHC', 'UHC', 'NoDebuff', 'Gapple', 'Combo',
+  'Boxing', 'Bridge', 'Anchor', 'Mace', 'Axe',
+  'Cart PvP', 'Vanilla', 'Bedwars', 'Skywars', 'Custom',
 ];
 
 export const TIERS: { name: string; color: number }[] = [
@@ -20,47 +20,45 @@ export const TIERS: { name: string; color: number }[] = [
   { name: 'HT 5', color: 0xC0392B },
 ];
 
-interface StaffRoleDef { emoji: string; name: string }
-
-const STAFF_DEFS: StaffRoleDef[] = [
-  { emoji: '👑', name: 'Founder' },
-  { emoji: '👑', name: 'Co-Founder' },
-  { emoji: '⚡', name: 'Lead Developer' },
-  { emoji: '⚡', name: 'Developer' },
-  { emoji: '🌐', name: 'Network Manager' },
-  { emoji: '🛡️', name: 'Head Administrator' },
-  { emoji: '🛡️', name: 'Administrator' },
-  { emoji: '🔰', name: 'Senior Moderator' },
-  { emoji: '🔰', name: 'Moderator' },
-  { emoji: '🔰', name: 'Trial Moderator' },
-  { emoji: '⚔️', name: 'Head Tier Tester' },
-  { emoji: '⚔️', name: 'Senior Tier Tester' },
-  { emoji: '⚔️', name: 'Tier Tester' },
-  { emoji: '⚔️', name: 'Trial Tier Tester' },
-  { emoji: '💎', name: 'Support Team' },
-  { emoji: '🔨', name: 'Builder' },
-  { emoji: '🎬', name: 'Media Team' },
-  { emoji: '✅', name: 'Verified' },
-  { emoji: '👤', name: 'Member' },
-  { emoji: '🔇', name: 'Muted' },
-  { emoji: '🤖', name: 'Bot' },
+const STAFF_DEFS = [
+  { emoji: '\uD83D\uDC51', name: 'Founder' },
+  { emoji: '\uD83D\uDC51', name: 'Co-Founder' },
+  { emoji: '\u26A1', name: 'Lead Developer' },
+  { emoji: '\u26A1', name: 'Developer' },
+  { emoji: '\uD83C\uDF10', name: 'Network Manager' },
+  { emoji: '\uD83D\uDEE1\uFE0F', name: 'Head Administrator' },
+  { emoji: '\uD83D\uDEE1\uFE0F', name: 'Administrator' },
+  { emoji: '\uD83D\uDD30', name: 'Senior Moderator' },
+  { emoji: '\uD83D\uDD30', name: 'Moderator' },
+  { emoji: '\uD83D\uDD30', name: 'Trial Moderator' },
+  { emoji: '\u2694\uFE0F', name: 'Head Tier Tester' },
+  { emoji: '\u2694\uFE0F', name: 'Senior Tier Tester' },
+  { emoji: '\u2694\uFE0F', name: 'Tier Tester' },
+  { emoji: '\u2694\uFE0F', name: 'Trial Tier Tester' },
+  { emoji: '\uD83D\uDC8E', name: 'Support Team' },
+  { emoji: '\uD83D\uDD28', name: 'Builder' },
+  { emoji: '\uD83C\uDFAC', name: 'Media Team' },
+  { emoji: '\u2705', name: 'Verified' },
+  { emoji: '\uD83D\uDC64', name: 'Member' },
+  { emoji: '\uD83D\uDD07', name: 'Muted' },
+  { emoji: '\uD83E\uDD16', name: 'Bot' },
 ];
 
 export const ALL_ROLES: { name: string; color: number }[] = [
   ...MODES.flatMap(mode =>
     TIERS.map(tier => ({
-      name: formatRoleName(`${mode} ${tier.name}`),
+      name: roleName(mode, tier.name),
       color: tier.color,
     }))
   ),
   ...STAFF_DEFS.map(sd => ({
-    name: formatStaffRoleName(sd.emoji, sd.name),
-    color: 0 as number,
+    name: staffRoleName(sd.emoji, sd.name),
+    color: 0,
   })),
 ];
 
-export const STAFF_EMOJI_PREFIX = /^(👑|⚡|🌐|🛡️|🔰|⚔️|💎|🔨|🎬)/;
+export const STAFF_PREFIX = /\u25C6/;
 
 export function getTierRoleName(mode: string, tier: string): string {
-  return formatRoleName(`${mode} ${tier}`);
+  return roleName(mode, tier);
 }

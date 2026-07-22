@@ -1,8 +1,8 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActionRowBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ALL_ROLES, STAFF_EMOJI_PREFIX, MODES, TIERS } from '../roles';
-import { formatRoleName } from '../utils/textStyles';
+import { ALL_ROLES, MODES, TIERS, STAFF_PREFIX } from '../roles';
+import { roleName } from '../utils/textStyles';
 import { addTierPoints, POINT_MODES, TIER_POINTS } from '../utils/pointsSystem';
 import { createRole } from '../utils/roleCreator';
 
@@ -11,7 +11,7 @@ const gtgState = new Map<string, { guildId: string; idx: number }>();
 function isStaff(member: any): boolean {
   if (member.permissions?.has(PermissionFlagsBits.Administrator)) return true;
   if (member.permissions?.has(PermissionFlagsBits.ManageRoles)) return true;
-  return member.roles?.cache?.some((r: any) => STAFF_EMOJI_PREFIX.test(r.name)) ?? false;
+  return member.roles?.cache?.some((r: any) => STAFF_PREFIX.test(r.name)) ?? false;
 }
 
 function findNextIndex(guild: any, start: number): number {
@@ -48,7 +48,7 @@ export class GtgCommand {
 
   private async handleGtg(interaction: ChatInputCommandInteraction) {
     if (!isStaff(interaction.member)) {
-      await interaction.reply({ content: '❌ This command is for staff only.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Staff only.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -57,7 +57,7 @@ export class GtgCommand {
 
     const startIdx = findNextIndex(guild, 0);
     if (startIdx >= ALL_ROLES.length) {
-      await interaction.reply({ content: '✅ All roles already exist.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'All roles already exist.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -66,22 +66,21 @@ export class GtgCommand {
 
     const remaining = ALL_ROLES.length - startIdx;
     const embed = new EmbedBuilder()
-      .setTitle('\u300C \u2726 ＧＴＧ \u2726 \u300D')
-      .setDescription(`**Next role:** ${ALL_ROLES[startIdx].name}\n**Remaining:** ${remaining}/${ALL_ROLES.length}\n\nClick the button to create this role.`)
+      .setDescription(`**Next:** ${ALL_ROLES[startIdx].name}\n**Remaining:** ${remaining}/${ALL_ROLES.length}`)
       .setColor(0x3498DB)
-      .setFooter({ text: '\u2726 Role creation \u2726' })
+      .setFooter({ text: '\u25C6 Role creation \u25C6' })
       .setTimestamp();
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next').setStyle(ButtonStyle.Success).setEmoji('⚔️'),
+      new ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next').setStyle(ButtonStyle.Success),
     );
 
-    await interaction.reply({ embeds: [embed] as any, components: [row as any], flags: MessageFlags.Ephemeral });
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
   }
 
   private async handleAdd(interaction: ChatInputCommandInteraction) {
     if (!isStaff(interaction.member)) {
-      await interaction.reply({ content: '❌ Staff only.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Staff only.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -93,7 +92,7 @@ export class GtgCommand {
     await guild.roles.fetch();
 
     if (guild.roles.cache.some((r: any) => r.name === name)) {
-      await interaction.reply({ content: `❌ Role **${name}** already exists.`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `Role **${name}** already exists.`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -102,32 +101,31 @@ export class GtgCommand {
     try {
       await createRole(guild, name, color);
       const embed = new EmbedBuilder()
-        .setTitle('✅ Role Created')
-        .setDescription(`**Name:** ${name}\n**Color:** \`#${color.toString(16).padStart(6, '0')}\``)
+        .setDescription(`**Created:** ${name}\n**Color:** \`#${color.toString(16).padStart(6, '0')}\``)
         .setColor(color)
         .setTimestamp();
-      await interaction.editReply({ embeds: [embed] as any });
+      await interaction.editReply({ embeds: [embed] });
     } catch (e: any) {
-      await interaction.editReply({ content: `❌ Failed: ${e.message}` });
+      await interaction.editReply({ content: `Failed: ${e.message}` });
     }
   }
 
   private async handleList(interaction: ChatInputCommandInteraction) {
     if (!isStaff(interaction.member)) {
-      await interaction.reply({ content: '❌ Staff only.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Staff only.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     const filePath = path.join(process.cwd(), 'all_roles_list.txt');
     if (!fs.existsSync(filePath)) {
-      await interaction.reply({ content: `❌ File \`all_roles_list.txt\` not found. Upload it to the bot directory.`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'File `all_roles_list.txt` not found.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     const data = fs.readFileSync(filePath, 'utf8');
     const lines = data.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
     if (lines.length === 0) {
-      await interaction.reply({ content: '❌ No valid role data in file.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'No valid role data in file.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -150,49 +148,47 @@ export class GtgCommand {
     }
 
     if (toCreate.length === 0) {
-      await interaction.editReply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}` });
+      await interaction.editReply({ content: `No roles to create.\n${errors.slice(0, 5).join('\n')}` });
       return;
     }
 
-    await interaction.editReply({ content: `⚙️ Creating ${toCreate.length} roles in batches of 5...` });
+    await interaction.editReply({ content: `Creating ${toCreate.length} roles in batches of 5...` });
 
     const failed: string[] = [];
     const BATCH = 5;
 
     for (let i = 0; i < toCreate.length; i += BATCH) {
       const batch = toCreate.slice(i, i + BATCH);
-      const results = await Promise.allSettled(
+      await Promise.allSettled(
         batch.map(r => guild.roles.create({ name: r.name, colors: { primaryColor: r.color }, hoist: false, mentionable: false, reason: 'GTG bulk' })
           .then(() => true)
           .catch(() => { failed.push(r.name); return false; }))
       );
-      const done = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
-      await interaction.editReply({ content: `⚙️ Created ${Math.min(i + BATCH, toCreate.length)}/${toCreate.length} roles...` });
+      await interaction.editReply({ content: `Created ${Math.min(i + BATCH, toCreate.length)}/${toCreate.length} roles...` });
     }
 
     const created = toCreate.length - failed.length;
     const embed = new EmbedBuilder()
-      .setTitle('✅ Bulk Role Creation')
       .setDescription(
         `**Created:** ${created}/${toCreate.length}\n` +
-        (failed.length > 0 ? `**Failed:** ${failed.length}\n${failed.slice(0, 5).map(n => `• ${n}`).join('\n')}` : '') +
+        (failed.length > 0 ? `**Failed:** ${failed.length}\n${failed.slice(0, 5).map(n => `\u25C6 ${n}`).join('\n')}` : '') +
         (errors.length > 0 ? `\n**Skipped:** ${errors.length} invalid lines` : '')
       )
       .setColor(failed.length > 0 ? 0xF1C40F : 0x2ECC71)
       .setTimestamp();
 
-    await interaction.editReply({ content: null, embeds: [embed] as any });
+    await interaction.editReply({ content: null, embeds: [embed] });
   }
 
   private async handleMode(interaction: ChatInputCommandInteraction) {
     if (!isStaff(interaction.member)) {
-      await interaction.reply({ content: '❌ Staff only.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Staff only.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     const mode = interaction.options.getString('mode', true);
     if (!MODES.includes(mode)) {
-      await interaction.reply({ content: `❌ Invalid mode. Available: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `Invalid mode. Options: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -202,16 +198,16 @@ export class GtgCommand {
     await guild.roles.fetch();
     const existing = new Set(guild.roles.cache.map((r: any) => r.name));
 
-    const toCreate = TIERS.map(t => ({ name: formatRoleName(`${mode} ${t.name}`), color: t.color }));
+    const toCreate = TIERS.map(t => ({ name: roleName(mode, t.name), color: t.color }));
     const skipped = toCreate.filter(r => existing.has(r.name));
     const needed = toCreate.filter(r => !existing.has(r.name));
 
     if (needed.length === 0) {
-      await interaction.editReply({ content: `✅ All **${mode}** roles already exist.` });
+      await interaction.editReply({ content: `All **${mode}** roles exist.` });
       return;
     }
 
-    await interaction.editReply({ content: `⚙️ Creating ${needed.length} ${mode} roles...` });
+    await interaction.editReply({ content: `Creating ${needed.length} ${mode} roles...` });
 
     const failed: string[] = [];
     const BATCH = 5;
@@ -223,25 +219,24 @@ export class GtgCommand {
           .then(() => {})
           .catch(() => { failed.push(r.name); }))
       );
-      await interaction.editReply({ content: `⚙️ ${mode}: ${Math.min(i + BATCH, needed.length)}/${needed.length} roles created...` });
+      await interaction.editReply({ content: `${mode}: ${Math.min(i + BATCH, needed.length)}/${needed.length}` });
     }
 
     const created = needed.length - failed.length;
     const embed = new EmbedBuilder()
-      .setTitle(`✅ ${mode} Roles Created`)
       .setDescription(
         `**Created:** ${created}/${needed.length} for ${mode}\n` +
-        (skipped.length ? `**Already existed:** ${skipped.length}\n` : '') +
-        (failed.length ? `**Failed:** ${failed.length}\n${failed.slice(0, 3).map(n => `• ${n}`).join('\n')}` : '')
+        (skipped.length ? `**Exists:** ${skipped.length}\n` : '') +
+        (failed.length ? `**Failed:** ${failed.length}\n${failed.slice(0, 3).map(n => `\u25C6 ${n}`).join('\n')}` : '')
       )
       .setColor(0x2ECC71).setTimestamp();
 
-    await interaction.editReply({ content: null, embeds: [embed] as any });
+    await interaction.editReply({ content: null, embeds: [embed] });
   }
 
   private async handleGive(interaction: ChatInputCommandInteraction) {
     if (!isStaff(interaction.member)) {
-      await interaction.reply({ content: '❌ Staff only.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Staff only.', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -251,13 +246,13 @@ export class GtgCommand {
     const tierLabel = `${tier.toUpperCase().includes('LT') ? 'LT' : 'HT'} ${tier.replace(/[^0-9]/g, '')}`;
 
     if (!MODES.includes(mode)) {
-      await interaction.reply({ content: `❌ Invalid mode. Available: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `Invalid mode. Options: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral });
       return;
     }
 
     const validTiers = TIERS.map(t => t.name);
     if (!validTiers.includes(tierLabel)) {
-      await interaction.reply({ content: `❌ Invalid tier. Use: ${validTiers.join(', ')}`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `Invalid tier. Use: ${validTiers.join(', ')}`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -266,18 +261,18 @@ export class GtgCommand {
     const guild = interaction.guild!;
     const member = await guild.members.fetch(user.id).catch(() => null);
     if (!member) {
-      await interaction.editReply({ content: '❌ User not found in this server.' });
+      await interaction.editReply({ content: 'User not found in this server.' });
       return;
     }
 
-    const roleName = formatRoleName(`${mode} ${tierLabel}`);
-    let role = guild.roles.cache.find((r: any) => r.name === roleName);
+    const roleNameStr = roleName(mode, tierLabel);
+    let role = guild.roles.cache.find((r: any) => r.name === roleNameStr);
     if (!role) {
       try {
         const tierData = TIERS.find(t => t.name === tierLabel)!;
-        role = await guild.roles.create({ name: roleName, colors: { primaryColor: tierData.color }, hoist: false, mentionable: false, reason: `GTG give by ${interaction.user.tag}` });
+        role = await guild.roles.create({ name: roleNameStr, colors: { primaryColor: tierData.color }, hoist: false, mentionable: false, reason: `GTG give by ${interaction.user.tag}` });
       } catch (e: any) {
-        await interaction.editReply({ content: `❌ Failed to create role: ${e.message}` });
+        await interaction.editReply({ content: `Failed to create role: ${e.message}` });
         return;
       }
     }
@@ -288,12 +283,11 @@ export class GtgCommand {
         addTierPoints(user.id, mode, tierLabel, user.displayName);
       }
       const embed = new EmbedBuilder()
-        .setTitle('✅ Role Given')
-        .setDescription(`**${user}** received **${roleName}**`)
+        .setDescription(`**${user}** received **${roleNameStr}**`)
         .setColor(0x2ECC71).setTimestamp();
-      await interaction.editReply({ embeds: [embed] as any });
+      await interaction.editReply({ embeds: [embed] });
     } catch (e: any) {
-      await interaction.editReply({ content: `❌ Failed to give role: ${e.message}` });
+      await interaction.editReply({ content: `Failed to give role: ${e.message}` });
     }
   }
 
@@ -303,20 +297,20 @@ export class GtgCommand {
     await interaction.deferUpdate();
 
     if (!isStaff(interaction.member)) {
-      await interaction.editReply({ content: '❌ Staff only.', components: [] });
+      await interaction.editReply({ content: 'Staff only.', components: [] });
       return;
     }
 
     const stateKey = interaction.customId.replace('gtg_create_', '');
     const state = gtgState.get(stateKey);
     if (!state) {
-      await interaction.editReply({ content: '❌ Session expired. Run /gtg again.', components: [] });
+      await interaction.editReply({ content: 'Session expired. Run /gtg again.', components: [] });
       return;
     }
 
     const guild = interaction.guild!;
     if (guild.id !== state.guildId) {
-      await interaction.editReply({ content: '❌ Wrong server.', components: [] });
+      await interaction.editReply({ content: 'Wrong server.', components: [] });
       return;
     }
 
@@ -324,10 +318,9 @@ export class GtgCommand {
     const idx = findNextIndex(guild, state.idx);
     if (idx >= ALL_ROLES.length) {
       const embed = new EmbedBuilder()
-        .setTitle('✅ All Done!')
         .setDescription(`All ${ALL_ROLES.length} roles created.`)
         .setColor(0x2ECC71);
-      await interaction.editReply({ embeds: [embed] as any, components: [] });
+      await interaction.editReply({ embeds: [embed], components: [] });
       gtgState.delete(stateKey);
       return;
     }
@@ -337,14 +330,13 @@ export class GtgCommand {
       await createRole(guild, role.name, role.color);
     } catch (e: any) {
       const embed = new EmbedBuilder()
-        .setTitle('❌ Failed')
         .setDescription(`Failed: **${role.name}** — ${e.message}`)
         .setColor(0xE74C3C);
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Retry').setStyle(ButtonStyle.Danger).setEmoji('🔄'),
-        new ButtonBuilder().setCustomId(`gtg_skip_${stateKey}`).setLabel('Skip').setStyle(ButtonStyle.Secondary).setEmoji('⏭️'),
+        new ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Retry').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId(`gtg_skip_${stateKey}`).setLabel('Skip').setStyle(ButtonStyle.Secondary),
       );
-      await interaction.editReply({ embeds: [embed] as any, components: [row as any] });
+      await interaction.editReply({ embeds: [embed], components: [row] });
       return;
     }
 
@@ -354,10 +346,9 @@ export class GtgCommand {
 
     if (nextIdx >= ALL_ROLES.length) {
       const embed = new EmbedBuilder()
-        .setTitle('✅ All Done!')
         .setDescription(`Created **${role.name}**\n\nAll ${ALL_ROLES.length} roles done!`)
         .setColor(0x2ECC71);
-      await interaction.editReply({ embeds: [embed] as any, components: [] });
+      await interaction.editReply({ embeds: [embed], components: [] });
       gtgState.delete(stateKey);
       return;
     }
@@ -365,17 +356,16 @@ export class GtgCommand {
     const next = ALL_ROLES[nextIdx];
     const remaining = ALL_ROLES.length - nextIdx;
     const embed = new EmbedBuilder()
-      .setTitle('\u300C \u2726 ＧＴＧ \u2726 \u300D')
-      .setDescription(`✅ Created **${role.name}**\n\n**Next:** ${next.name}\n**Remaining:** ${remaining}/${ALL_ROLES.length}`)
+      .setDescription(`Created **${role.name}**\n\n**Next:** ${next.name}\n**Remaining:** ${remaining}/${ALL_ROLES.length}`)
       .setColor(0x3498DB)
-      .setFooter({ text: '\u2726 Role creation \u2726' })
+      .setFooter({ text: '\u25C6 Role creation \u25C6' })
       .setTimestamp();
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next').setStyle(ButtonStyle.Success).setEmoji('⚔️'),
+      new ButtonBuilder().setCustomId(`gtg_create_${stateKey}`).setLabel('Create Next').setStyle(ButtonStyle.Success),
     );
 
-    await interaction.editReply({ embeds: [embed] as any, components: [row as any] });
+    await interaction.editReply({ embeds: [embed], components: [row] });
   }
 
   static async handleSkip(interaction: any) {
@@ -384,14 +374,14 @@ export class GtgCommand {
     await interaction.deferUpdate();
 
     if (!isStaff(interaction.member)) {
-      await interaction.editReply({ content: '❌ Staff only.', components: [] });
+      await interaction.editReply({ content: 'Staff only.', components: [] });
       return;
     }
 
     const stateKey = interaction.customId.replace('gtg_skip_', '');
     const state = gtgState.get(stateKey);
     if (!state) {
-      await interaction.editReply({ content: '❌ Session expired.', components: [] });
+      await interaction.editReply({ content: 'Session expired.', components: [] });
       return;
     }
 
@@ -405,22 +395,22 @@ export class GtgCommand {
       .setDescription('Create roles (staff only)')
       .addSubcommand(sub => sub
         .setName('add')
-        .setDescription('Manually add a single role by name and color')
+        .setDescription('Add a single role')
         .addStringOption(opt => opt.setName('name').setDescription('Role name').setRequired(true))
-        .addStringOption(opt => opt.setName('color').setDescription('Hex color (e.g. #FF0000)').setRequired(false)))
+        .addStringOption(opt => opt.setName('color').setDescription('Hex color').setRequired(false)))
       .addSubcommand(sub => sub
         .setName('list')
-        .setDescription('Read all_roles_list.txt and bulk create roles from it'))
+        .setDescription('Bulk create roles from all_roles_list.txt'))
       .addSubcommand(sub => sub
         .setName('mode')
-        .setDescription('Create all 10 tiers for a specific PvP mode')
-        .addStringOption(opt => opt.setName('mode').setDescription('PvP mode name').setRequired(true).setAutocomplete(true)))
+        .setDescription('Create 10 tiers for a PvP mode')
+        .addStringOption(opt => opt.setName('mode').setDescription('PvP mode').setRequired(true).setAutocomplete(true)))
       .addSubcommand(sub => sub
         .setName('give')
         .setDescription('Give a tier role to a user')
-        .addUserOption(opt => opt.setName('user').setDescription('User to give the role to').setRequired(true))
+        .addUserOption(opt => opt.setName('user').setDescription('User').setRequired(true))
         .addStringOption(opt => opt.setName('mode').setDescription('PvP mode').setRequired(true).setAutocomplete(true))
-        .addStringOption(opt => opt.setName('tier').setDescription('Tier (e.g. HT 1, LT 5)').setRequired(true)))
+        .addStringOption(opt => opt.setName('tier').setDescription('Tier').setRequired(true)))
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
       .setDMPermission(false);
   }

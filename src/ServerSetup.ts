@@ -16,7 +16,15 @@ const DARK = BRAND.DARK;
 
 // Categories use a single-line format (Discord doesn't support newlines in names)
 interface CatDef { key: string; name: string; position: number }
-interface ChanDef { cat: string; key: string; topic?: string }
+interface ChanDef { cat: string; key: string; topic?: string; writable?: boolean }
+
+const READONLY_KEYS = new Set([
+  'welcome', 'rules', 'faq', 'announcements', 'server-ip', 'updates',
+  'verify',
+  'roles', 'tier-guide',
+  'request-test', 'queue', 'tier-results', 'leaderboards', 'tier-info', 'retest',
+  'create-ticket', 'bug-report', 'report-player', 'appeal', 'questions',
+]);
 interface PanelDef { key: string; build: (ch: TextChannel) => Promise<void> }
 
 // ── Categories ──
@@ -216,16 +224,22 @@ export class ServerSetup {
 
   async setupChannels(): Promise<number> {
     let count = 0;
+    const everyone = this.guild.roles.everyone;
     for (const ch of CHANNELS) {
       try {
-        const cat = this.findCat(ch.cat);
+        const cat = this.findCat(ch.key);
         const displayName = CHANNEL_KEYS[ch.key];
         if (!cat || !displayName || cat.children.cache.some(c => c.name === displayName)) continue;
         const vc = ch.key.startsWith('general-') || ch.key === 'afk' || ch.key === 'staff-vc' || ch.key === 'meeting';
+        const overwrites: any[] = [];
+        if (!vc && READONLY_KEYS.has(ch.key)) {
+          overwrites.push({ id: everyone.id, deny: [PermissionFlagsBits.SendMessages] });
+        }
         await cat.children.create({
           name: displayName,
           type: vc ? ChannelType.GuildVoice : ChannelType.GuildText,
           topic: ch.topic || undefined,
+          permissionOverwrites: overwrites.length > 0 ? overwrites : undefined,
         } as any);
         logger.info(`  #${displayName}`);
         count++;

@@ -233,7 +233,7 @@ export class GtgCommand {
     const user = interaction.options.getUser('user', true);
     const mode = interaction.options.getString('mode', true);
     const tier = interaction.options.getString('tier', true);
-    const tierLabel = `${tier.toUpperCase().includes('LT') ? 'LT' : 'HT'} ${tier.replace(/[^0-9]/g, '')}`;
+    const tierLabel = `${tier.toUpperCase().includes('LT') ? 'LT' : 'HT'}${tier.replace(/[^0-9]/g, '')}`;
 
     if (!MODES.includes(mode)) {
       await interaction.reply({ content: `❌ Invalid mode. Available: ${MODES.join(', ')}`, flags: MessageFlags.Ephemeral });
@@ -242,7 +242,7 @@ export class GtgCommand {
 
     const validTiers = TIERS.map(t => t.name);
     if (!validTiers.includes(tierLabel)) {
-      await interaction.reply({ content: `❌ Invalid tier. Use: ${validTiers.join(', ')}`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `❌ Invalid tier. Use: ${validTiers.join(', ')} (e.g. HT1, LT5)`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -413,7 +413,7 @@ export class GtgCommand {
         .setDescription('Give a tier role to a user')
         .addUserOption(opt => opt.setName('user').setDescription('User to give the role to').setRequired(true))
         .addStringOption(opt => opt.setName('mode').setDescription('PvP mode').setRequired(true).setAutocomplete(true))
-        .addStringOption(opt => opt.setName('tier').setDescription('Tier (e.g. HT 1, LT 5)').setRequired(true)))
+        .addStringOption(opt => opt.setName('tier').setDescription('Tier (e.g. HT1, LT5)').setRequired(true)))
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
       .setDMPermission(false);
   }

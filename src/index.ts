@@ -662,7 +662,17 @@ app.get('/api/stats', (_req, res) => {
   });
 });
 
-app.listen(PORT, () => console.log(`🌐 Health check server on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🌐 Health check server on port ${PORT}`);
+  const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || '';
+  if (externalUrl) {
+    console.log(`🔄 Keep-alive enabled — pinging ${externalUrl} every 4 min`);
+    setInterval(async () => {
+      try { await fetch(`${externalUrl}/api/health`, { signal: AbortSignal.timeout(10000) }); }
+      catch { /* keep-alive ping failed — instance may be sleeping */ }
+    }, 240_000);
+  }
+});
 
 if (!DISCORD_TOKEN) {
   console.error('❌ No DISCORD_TOKEN env var set');

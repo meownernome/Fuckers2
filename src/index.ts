@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import cors from 'cors';
 import * as path from 'path';
 import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits, MessageFlags, GuildMember } from 'discord.js';
 import { getAllCommands } from './commands';
@@ -485,6 +486,20 @@ async function handleApplication(interaction: any, title: string, type: string, 
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const app = express();
 app.use(express.json());
+app.use(cors());
+
+let membersCache: any[] | null = null;
+let cacheTime = 0;
+const CACHE_TTL = 300_000;
+
+async function getCachedMembers(guild: any) {
+  if (!membersCache || Date.now() - cacheTime > CACHE_TTL) {
+    await guild.members.fetch();
+    membersCache = [...guild.members.cache.values()];
+    cacheTime = Date.now();
+  }
+  return membersCache;
+}
 
 function getKitMapping(): Record<string, string> {
   return {
@@ -546,10 +561,10 @@ app.get('/api/players', async (_req, res) => {
   try {
     const guild = client.guilds.cache.first();
     if (!guild) return res.json([]);
-    await guild.members.fetch();
+    const members = await getCachedMembers(guild);
     const data = getAllPlayerData();
 
-    const players = guild.members.cache.map(m => {
+    const players = members.map(m => {
       const pd = data[m.id] || { points: 0, modes: {} };
       const tierRoles = getPlayerTiers(m);
       const ign = pd.ign || m.user.username;
@@ -585,11 +600,11 @@ app.get('/api/players/:name', async (req, res) => {
   try {
     const guild = client.guilds.cache.first();
     if (!guild) return res.status(404).json({ error: 'Not found' });
-    await guild.members.fetch();
+    const members = await getCachedMembers(guild);
     const data = getAllPlayerData();
     const name = req.params.name.toLowerCase();
 
-    const member = guild.members.cache.find((m: any) => {
+    const member = members.find((m: any) => {
       const pd = data[m.id];
       const ign = (pd?.ign || m.user.username).toLowerCase();
       return ign === name || m.user.username.toLowerCase() === name;
@@ -629,8 +644,8 @@ app.get('/api/staff', async (_req, res) => {
     const guild = client.guilds.cache.first();
     if (!guild) return res.json([]);
     const staffPattern = /^(👑|⚡|🌐|🛡️|🔰|⚔️|💎|🔨|🎬)/;
-    const members = guild.members.cache.filter((m: any) => m.roles.cache.some((r: any) => staffPattern.test(r.name)));
-    const staffList = members.map((m: any) => {
+    const members = await getCachedMembers(guild);
+    const staffList = members.filter((m: any) => m.roles.cache.some((r: any) => staffPattern.test(r.name))).map((m: any) => {
       const staffRole = m.roles.cache.find((r: any) => staffPattern.test(r.name));
       return {
         name: m.user.username,
@@ -662,21 +677,21 @@ app.get('/api/stats', (_req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🌐 Health check server on port ${PORT}`);
-  const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || '';
-  if (externalUrl) {
-    console.log(`🔄 Keep-alive enabled — pinging ${externalUrl} every 4 min`);
-    setInterval(async () => {
-      try { await fetch(`${externalUrl}/api/health`, { signal: AbortSignal.timeout(10000) }); }
-      catch { /* keep-alive ping failed — instance may be sleeping */ }
-    }, 240_000);
-  }
-});
-
 if (!DISCORD_TOKEN) {
   console.error('❌ No DISCORD_TOKEN env var set');
   process.exit(1);
 }
 
-client.login(DISCORD_TOKEN).catch(e => console.error('Login failed:', e.message));
+client.login(DISCORD_TOKEN).then(() => {
+  app.listen(PORT, () => {
+    console.log(`🌐 API server running on port ${PORT}`);
+    const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || '';
+    if (externalUrl) {
+      console.log(`🔄 Keep-alive pinging ${externalUrl} every 4 min`);
+      setInterval(async () => {
+        try { await fetch(`${externalUrl}/api/health`, { signal: AbortSignal.timeout(10000) }); }
+        catch { /* keep-alive */ }
+      }, 240_000);
+    }
+  });
+}).catch(e => console.error('Login failed:', e.message));

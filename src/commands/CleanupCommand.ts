@@ -19,7 +19,7 @@ export class CleanupCommand {
       const count = await setup.cleanupRoles();
       const embed = new EmbedBuilder()
         .setColor(0xE74C3C)
-        .setDescription(`\`\`\`md\n${SEP}\n〔 ＣＬＥＡＮＵＰ ＲＯＬＥＳ 〕\n${SEP}\`\`\`\n\n│ **Deleted:** ${count} HARVAL roles\n│ *Non-HARVAL roles were left untouched.*\n\n${SEP}`)
+        .setDescription(`\`\`\`md\n${SEP}\n〔 ＣＬＥＡＮＵＰ ＲＯＬＥＳ 〕\n${SEP}\`\`\`\n\n│ **Deleted:** ${count} roles\n│ *All deletable roles removed (except @everyone & managed).*\n\n${SEP}`)
         .setTimestamp();
       await interaction.editReply({ embeds: [embed] });
       logger.info(`🧹 ${interaction.user.tag} cleaned ${count} roles`);
@@ -68,7 +68,7 @@ export class CleanupCommand {
     if (sub === 'all') {
       const confirmEmbed = new EmbedBuilder()
         .setColor(0xE74C3C)
-        .setDescription(`\`\`\`md\n${SEP}\n〔 ⚠ ＮＵＣＬＥＡＲ ＣＬＥＡＮＵＰ 〕\n${SEP}\`\`\`\n\nThis will delete **ALL** HARVAL-created objects:\n│ ◆ Channels & categories\n│ ◆ Roles\n│ ◆ Panel messages\n│ ◆ Log channels\n\n**This cannot be undone!**\n\n${SEP}`)
+        .setDescription(`\`\`\`md\n${SEP}\n〔 ⚠ ＮＵＣＬＥＡＲ ＣＬＥＡＮＵＰ 〕\n${SEP}\`\`\`\n\nThis will delete **ALL** objects:\n│ ◆ Channels & categories\n│ ◆ Roles (all except @everyone & managed)\n│ ◆ Panel messages\n│ ◆ Log channels\n\n**This cannot be undone!**\n\n${SEP}`)
         .setTimestamp();
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(

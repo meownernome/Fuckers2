@@ -159,7 +159,6 @@ export class GtgCommand {
         }).catch(() => {});
       }
 
-      await new Promise(r => setTimeout(r, 1100));
     }
 
     const elapsed = ((Date.now() - start) / 1000).toFixed(0);
@@ -213,7 +212,6 @@ export class GtgCommand {
           content: `\`\`\`\n[${progressBar(i + 1, needed.length)}] ${i + 1}/${needed.length}\n\`\`\`⚙️ ${needed.length - failed.length} created • ${failed.length} failed`,
         }).catch(() => {});
       }
-      await new Promise(r => setTimeout(r, 1100));
     }
 
     const created = needed.length - failed.length;

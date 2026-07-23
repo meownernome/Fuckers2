@@ -152,8 +152,12 @@ export const HARVAL_CHANNEL_NAMES = new Set(Object.values(CHANNEL_KEYS));
 function embed(title: string, desc: string, color: number): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(color)
-    .setDescription(`\`\`\`md\n${SEP}\n${title}${SEP}\`\`\`\n${desc}`)
+    .setDescription(`${SEP}\n\n${desc}`)
     .setTimestamp();
+}
+
+function msg(text: string): string {
+  return `${SEP}\n\n${text}\n\n${SEP}`;
 }
 
 function actionRow(...btns: ButtonBuilder[]): ActionRowBuilder<ButtonBuilder> {

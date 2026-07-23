@@ -809,12 +809,8 @@ export class ServerSetup {
 
   async cleanupRoles(): Promise<number> {
     let count = 0;
-    const toDelete = this.guild.roles.cache.filter(r =>
-      (r.name.startsWith('◆ ') || r.name.includes('✦')) &&
-      !r.managed &&
-      r.name !== '@everyone'
-    );
-    for (const [, r] of toDelete) {
+    for (const [, r] of this.guild.roles.cache) {
+      if (r.name === '@everyone' || r.managed) continue;
       await r.delete().catch(() => {});
       count++;
     }

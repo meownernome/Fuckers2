@@ -19,7 +19,7 @@ class CleanupCommand {
             const count = await setup.cleanupRoles();
             const embed = new discord_js_1.EmbedBuilder()
                 .setColor(0xE74C3C)
-                .setDescription(`\`\`\`md\n${SEP}\n〔 ＣＬＥＡＮＵＰ ＲＯＬＥＳ 〕\n${SEP}\`\`\`\n\n│ **Deleted:** ${count} roles\n│ *All deletable roles removed (except @everyone & managed).*\n\n${SEP}`)
+                .setDescription(`\`\`\`md\n${SEP}\n〔 ＣＬＥＡＮＵＰ ＲＯＬＥＳ 〕\n${SEP}\`\`\`\n\n│ **Deleted:** ${count} HARVAL roles\n│ *Non-HARVAL roles were left untouched.*\n\n${SEP}`)
                 .setTimestamp();
             await interaction.editReply({ embeds: [embed] });
             Logger_1.logger.info(`🧹 ${interaction.user.tag} cleaned ${count} roles`);
@@ -64,7 +64,7 @@ class CleanupCommand {
         if (sub === 'all') {
             const confirmEmbed = new discord_js_1.EmbedBuilder()
                 .setColor(0xE74C3C)
-                .setDescription(`\`\`\`md\n${SEP}\n〔 ⚠ ＮＵＣＬＥＡＲ ＣＬＥＡＮＵＰ 〕\n${SEP}\`\`\`\n\nThis will delete **ALL** objects:\n│ ◆ Channels & categories\n│ ◆ Roles (all except @everyone & managed)\n│ ◆ Panel messages\n│ ◆ Log channels\n\n**This cannot be undone!**\n\n${SEP}`)
+                .setDescription(`\`\`\`md\n${SEP}\n〔 ⚠ ＮＵＣＬＥＡＲ ＣＬＥＡＮＵＰ 〕\n${SEP}\`\`\`\n\nThis will delete **ALL** HARVAL-created objects:\n│ ◆ Channels & categories\n│ ◆ Roles\n│ ◆ Panel messages\n│ ◆ Log channels\n\n**This cannot be undone!**\n\n${SEP}`)
                 .setTimestamp();
             const row = new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.ButtonBuilder().setCustomId('cleanup_confirm').setLabel('YES DELETE EVERYTHING').setStyle(discord_js_1.ButtonStyle.Danger), new discord_js_1.ButtonBuilder().setCustomId('cleanup_cancel').setLabel('Cancel').setStyle(discord_js_1.ButtonStyle.Secondary));
             await interaction.reply({ embeds: [confirmEmbed], components: [row], flags: discord_js_1.MessageFlags.Ephemeral });

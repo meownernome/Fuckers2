@@ -143,6 +143,7 @@ class GtgCommand {
                     content: `\`\`\`\n[${progressBar(i + 1, total)}] ${i + 1}/${total}\n\`\`\`⚙️ ${created} created • ${failed} failed • ${elapsed}s`,
                 }).catch(() => { });
             }
+            await new Promise(r => setTimeout(r, 1100));
         }
         const elapsed = ((Date.now() - start) / 1000).toFixed(0);
         const SEP = textStyles_2.BRAND.SEPARATOR;
@@ -187,6 +188,7 @@ class GtgCommand {
                     content: `\`\`\`\n[${progressBar(i + 1, needed.length)}] ${i + 1}/${needed.length}\n\`\`\`⚙️ ${needed.length - failed.length} created • ${failed.length} failed`,
                 }).catch(() => { });
             }
+            await new Promise(r => setTimeout(r, 1100));
         }
         const created = needed.length - failed.length;
         const SEP = textStyles_2.BRAND.SEPARATOR;
@@ -204,14 +206,14 @@ class GtgCommand {
         const user = interaction.options.getUser('user', true);
         const mode = interaction.options.getString('mode', true);
         const tier = interaction.options.getString('tier', true);
-        const tierLabel = `${tier.toUpperCase().includes('LT') ? 'LT' : 'HT'}${tier.replace(/[^0-9]/g, '')}`;
+        const tierLabel = `${tier.toUpperCase().includes('LT') ? 'LT' : 'HT'} ${tier.replace(/[^0-9]/g, '')}`;
         if (!roles_1.MODES.includes(mode)) {
             await interaction.reply({ content: `❌ Invalid mode. Available: ${roles_1.MODES.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const validTiers = roles_1.TIERS.map(t => t.name);
         if (!validTiers.includes(tierLabel)) {
-            await interaction.reply({ content: `❌ Invalid tier. Use: ${validTiers.join(', ')} (e.g. HT1, LT5)`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: `❌ Invalid tier. Use: ${validTiers.join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
@@ -359,7 +361,7 @@ class GtgCommand {
             .setDescription('Give a tier role to a user')
             .addUserOption(opt => opt.setName('user').setDescription('User to give the role to').setRequired(true))
             .addStringOption(opt => opt.setName('mode').setDescription('PvP mode').setRequired(true).setAutocomplete(true))
-            .addStringOption(opt => opt.setName('tier').setDescription('Tier (e.g. HT1, LT5)').setRequired(true)))
+            .addStringOption(opt => opt.setName('tier').setDescription('Tier (e.g. HT 1, LT 5)').setRequired(true)))
             .setDefaultMemberPermissions(discord_js_1.PermissionFlagsBits.ManageRoles)
             .setDMPermission(false);
     }

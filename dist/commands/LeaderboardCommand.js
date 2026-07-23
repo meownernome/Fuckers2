@@ -6,7 +6,7 @@ const pointsSystem_1 = require("../utils/pointsSystem");
 const textStyles_1 = require("../utils/textStyles");
 class LeaderboardCommand {
     async execute(interaction) {
-        const lb = (await (0, pointsSystem_1.getLeaderboard)()).slice(0, 20);
+        const lb = (0, pointsSystem_1.getLeaderboard)().slice(0, 20);
         const SEP = textStyles_1.BRAND.SEPARATOR;
         const embed = new discord_js_1.EmbedBuilder()
             .setColor(0xFFD700)

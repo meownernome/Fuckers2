@@ -13,7 +13,6 @@ const roles_1 = require("./roles");
 const textStyles_1 = require("./utils/textStyles");
 const roleCreator_1 = require("./utils/roleCreator");
 const pointsSystem_1 = require("./utils/pointsSystem");
-const database_1 = require("./utils/database");
 dotenv_1.default.config();
 const client = new discord_js_1.Client({
     intents: [
@@ -65,18 +64,11 @@ async function registerCommands() {
 }
 client.once(discord_js_1.Events.ClientReady, async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
-    await (0, database_1.connectDB)();
     await registerCommands();
     console.log(`Total commands: ${commands.length}`);
     for (const guild of client.guilds.cache.values()) {
         await ensureAllRoles(guild);
-        await (0, pointsSystem_1.syncGuildMembers)(guild);
     }
-    setInterval(async () => {
-        for (const guild of client.guilds.cache.values()) {
-            await (0, pointsSystem_1.syncGuildMembers)(guild);
-        }
-    }, 300_000);
 });
 client.on(discord_js_1.Events.GuildMemberAdd, async (member) => {
     const guild = member.guild;
@@ -299,7 +291,7 @@ async function handleButton(interaction) {
             return;
         }
         const modal = new discord_js_1.ModalBuilder().setCustomId(`tier_result_${channelId}`).setTitle('Assign Tier');
-        modal.addComponents(new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.TextInputBuilder().setCustomId('tier').setLabel('Tier (e.g. HT3, LT5)').setStyle(discord_js_1.TextInputStyle.Short).setRequired(true).setPlaceholder('e.g. HT3')));
+        modal.addComponents(new discord_js_1.ActionRowBuilder().addComponents(new discord_js_1.TextInputBuilder().setCustomId('tier').setLabel('Tier (LT 1-5 / HT 1-5)').setStyle(discord_js_1.TextInputStyle.Short).setRequired(true).setPlaceholder('e.g. HT 3')));
         await interaction.showModal(modal);
         return;
     }
@@ -326,7 +318,7 @@ async function handleModal(interaction) {
             }
             catch { }
         }
-        await (0, pointsSystem_1.setPlayerIGN)(interaction.user.id, ign);
+        (0, pointsSystem_1.setPlayerIGN)(interaction.user.id, ign);
         await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, flags: discord_js_1.MessageFlags.Ephemeral });
         const SEP = textStyles_1.BRAND.SEPARATOR;
         const logEmbed = new discord_js_1.EmbedBuilder()
@@ -402,10 +394,10 @@ async function handleModal(interaction) {
             await interaction.reply({ content: '❌ Ticket expired.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase().replace(/\s+/g, '');
+        const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase();
         const tierMatch = TIERS.find(t => t.name.toUpperCase() === tierInput);
         if (!tierMatch) {
-            await interaction.reply({ content: `❌ Invalid tier. Use: ${TIERS.map(t => t.name).join(', ')}`, flags: discord_js_1.MessageFlags.Ephemeral });
+            await interaction.reply({ content: '❌ Invalid tier. Use LT 1-5 or HT 1-5.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
         const roleName = (0, roles_1.getTierRoleName)(state.mode, tierMatch.name);
@@ -504,9 +496,11 @@ app.get('/api/leaderboard/:kit', async (req, res) => {
     try {
         const kit = req.params.kit || 'overall';
         const modeName = getKitMapping()[kit];
-        const lb = await (0, pointsSystem_1.getLeaderboard)();
+        const lb = (0, pointsSystem_1.getLeaderboard)();
         const entries = lb.slice(0, 100).map((p, i) => {
-            let pts = p.points || 0;
+            const data = (0, pointsSystem_1.getAllPlayerData)();
+            const pd = data[p.userId];
+            let pts = (pd?.points || 0);
             return {
                 place: i + 1,
                 username: p.ign,
@@ -529,7 +523,7 @@ app.get('/api/players', async (_req, res) => {
         if (!guild)
             return res.json([]);
         await guild.members.fetch();
-        const data = await (0, pointsSystem_1.getAllPlayerData)();
+        const data = (0, pointsSystem_1.getAllPlayerData)();
         const players = guild.members.cache.map(m => {
             const pd = data[m.id] || { points: 0, modes: {} };
             const tierRoles = getPlayerTiers(m);
@@ -566,7 +560,7 @@ app.get('/api/players/:name', async (req, res) => {
         if (!guild)
             return res.status(404).json({ error: 'Not found' });
         await guild.members.fetch();
-        const data = await (0, pointsSystem_1.getAllPlayerData)();
+        const data = (0, pointsSystem_1.getAllPlayerData)();
         const name = req.params.name.toLowerCase();
         const member = guild.members.cache.find((m) => {
             const pd = data[m.id];
@@ -640,19 +634,7 @@ app.get('/api/stats', (_req, res) => {
         online: guild?.members.cache.filter(m => m.presence?.status === 'online').size.toString() || '0',
     });
 });
-app.listen(PORT, () => {
-    console.log(`🌐 Health check server on port ${PORT}`);
-    const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.EXTERNAL_URL || '';
-    if (externalUrl) {
-        console.log(`🔄 Keep-alive enabled — pinging ${externalUrl} every 4 min`);
-        setInterval(async () => {
-            try {
-                await fetch(`${externalUrl}/api/health`, { signal: AbortSignal.timeout(10000) });
-            }
-            catch { /* keep-alive ping failed — instance may be sleeping */ }
-        }, 240_000);
-    }
-});
+app.listen(PORT, () => console.log(`🌐 Health check server on port ${PORT}`));
 if (!DISCORD_TOKEN) {
     console.error('❌ No DISCORD_TOKEN env var set');
     process.exit(1);

@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TIER_POINTS = exports.POINT_MODES = void 0;
 exports.setPlayerIGN = setPlayerIGN;
@@ -6,9 +39,9 @@ exports.getPlayerPoints = getPlayerPoints;
 exports.addTierPoints = addTierPoints;
 exports.getLeaderboard = getLeaderboard;
 exports.getAllPlayerData = getAllPlayerData;
-exports.syncGuildMembers = syncGuildMembers;
-const database_1 = require("./database");
-const Logger_1 = require("./Logger");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const POINTS_FILE = path.join(process.cwd(), 'data', 'playerPoints.json');
 exports.POINT_MODES = ['Sword', 'Crystal', 'Axe', 'Netherite Pot', 'Mace', 'SMP Pot', 'UHC'];
 exports.TIER_POINTS = {
     'LT5': 10, 'HT5': 20,
@@ -17,143 +50,49 @@ exports.TIER_POINTS = {
     'LT2': 70, 'HT2': 80,
     'LT1': 90, 'HT1': 100,
 };
-function pointsToTier(points) {
-    if (points >= 100)
-        return 'HT1';
-    if (points >= 90)
-        return 'LT1';
-    if (points >= 80)
-        return 'HT2';
-    if (points >= 70)
-        return 'LT2';
-    if (points >= 60)
-        return 'HT3';
-    if (points >= 50)
-        return 'LT3';
-    if (points >= 40)
-        return 'HT4';
-    if (points >= 30)
-        return 'LT4';
-    if (points >= 20)
-        return 'HT5';
-    if (points >= 10)
-        return 'LT5';
-    return 'Unranked';
-}
-async function setPlayerIGN(userId, ign) {
-    await (0, database_1.connectDB)();
+function loadData() {
     try {
-        await database_1.PlayerModel.findOneAndUpdate({ discordId: userId }, { $set: { username: ign, displayName: ign, lastActive: new Date() }, $setOnInsert: { joinDate: new Date() } }, { upsert: true });
+        if (fs.existsSync(POINTS_FILE)) {
+            return JSON.parse(fs.readFileSync(POINTS_FILE, 'utf8'));
+        }
     }
-    catch (e) {
-        Logger_1.logger.error(`setPlayerIGN error: ${e.message}`);
-    }
+    catch { }
+    return {};
 }
-async function getPlayerPoints(userId) {
-    await (0, database_1.connectDB)();
-    try {
-        const p = await database_1.PlayerModel.findOne({ discordId: userId }).lean();
-        return p?.points || 0;
-    }
-    catch {
-        return 0;
-    }
+function saveData(data) {
+    const dir = path.dirname(POINTS_FILE);
+    if (!fs.existsSync(dir))
+        fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(POINTS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
-async function addTierPoints(userId, mode, tier, ign) {
-    await (0, database_1.connectDB)();
+function setPlayerIGN(userId, ign) {
+    const data = loadData();
+    if (!data[userId])
+        data[userId] = { points: 0, modes: {} };
+    data[userId].ign = ign;
+    saveData(data);
+}
+function getPlayerPoints(userId) {
+    const data = loadData();
+    return data[userId]?.points || 0;
+}
+function addTierPoints(userId, mode, tier, ign) {
+    const data = loadData();
+    if (!data[userId])
+        data[userId] = { points: 0, modes: {} };
     const pts = exports.TIER_POINTS[tier] || 0;
-    try {
-        await database_1.PlayerModel.findOneAndUpdate({ discordId: userId }, {
-            $inc: { points: pts },
-            $set: {
-                [`stats.${mode}`]: { points: pts, tier, rank: 0 },
-                lastActive: new Date(),
-                ...(ign ? { username: ign, displayName: ign } : {}),
-            },
-            $setOnInsert: { joinDate: new Date(), roles: [], status: 'Offline' },
-        }, { upsert: true });
-        const player = await database_1.PlayerModel.findOne({ discordId: userId }).lean();
-        if (player) {
-            await database_1.PlayerModel.updateOne({ discordId: userId }, { $set: { tier: pointsToTier(player.points + pts) } });
-        }
-    }
-    catch (e) {
-        Logger_1.logger.error(`addTierPoints error: ${e.message}`);
-    }
+    data[userId].points = (data[userId].points || 0) + pts;
+    data[userId].modes[mode] = tier;
+    if (ign)
+        data[userId].ign = ign;
+    saveData(data);
 }
-async function getLeaderboard() {
-    await (0, database_1.connectDB)();
-    try {
-        return (await database_1.PlayerModel.find({}).sort({ points: -1 }).limit(100).lean()).map(p => ({
-            userId: p.discordId,
-            ign: p.displayName || p.username || p.discordId,
-            points: p.points || 0,
-        }));
-    }
-    catch {
-        return [];
-    }
+function getLeaderboard() {
+    const data = loadData();
+    return Object.entries(data)
+        .map(([userId, d]) => ({ userId, ign: d.ign || userId, points: d.points || 0 }))
+        .sort((a, b) => b.points - a.points);
 }
-async function getAllPlayerData() {
-    await (0, database_1.connectDB)();
-    try {
-        const players = await database_1.PlayerModel.find({}).lean();
-        const map = {};
-        for (const p of players) {
-            map[p.discordId] = { points: p.points || 0, modes: Object.fromEntries(p.stats || new Map()), ign: p.displayName || p.username };
-        }
-        return map;
-    }
-    catch {
-        return {};
-    }
-}
-async function getOrCreatePlayer(discordId, username) {
-    await (0, database_1.connectDB)();
-    try {
-        return await database_1.PlayerModel.findOneAndUpdate({ discordId }, { $set: { username, lastActive: new Date() }, $setOnInsert: { displayName: username, points: 0, tier: 'Unranked', roles: [], status: 'Offline', joinDate: new Date(), stats: new Map() } }, { upsert: true, new: true }).lean();
-    }
-    catch {
-        return null;
-    }
-}
-async function syncGuildMembers(guild) {
-    await (0, database_1.connectDB)();
-    try {
-        await guild.members.fetch();
-        let count = 0;
-        for (const [, m] of guild.members.cache) {
-            if (m.user.bot)
-                continue;
-            const tierRoles = [];
-            const statsMap = {};
-            for (const role of m.roles.cache.values()) {
-                const match = role.name.match(/◆ (.+?) • (LT[1-5]|HT[1-5])/);
-                if (match) {
-                    tierRoles.push(role.name);
-                    statsMap[match[1].trim()] = { tier: match[2], points: exports.TIER_POINTS[match[2]] || 0, rank: 0 };
-                }
-            }
-            const totalPoints = Object.values(statsMap).reduce((sum, s) => sum + s.points, 0);
-            await database_1.PlayerModel.findOneAndUpdate({ discordId: m.id }, {
-                $set: {
-                    username: m.user.username,
-                    displayName: m.displayName || m.user.username,
-                    avatar: m.user.displayAvatarURL(),
-                    status: m.presence?.status || 'Offline',
-                    roles: tierRoles,
-                    stats: statsMap,
-                    points: totalPoints,
-                    tier: pointsToTier(totalPoints),
-                    lastActive: new Date(),
-                },
-                $setOnInsert: { joinDate: new Date() },
-            }, { upsert: true });
-            count++;
-        }
-        Logger_1.logger.info(`📦 Synced ${count} members to MongoDB`);
-    }
-    catch (e) {
-        Logger_1.logger.error(`syncGuildMembers error: ${e.message}`);
-    }
+function getAllPlayerData() {
+    return loadData();
 }

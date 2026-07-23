@@ -9,8 +9,7 @@ import { ALL_ROLES, getTierRoleName, STAFF_EMOJI_PREFIX, MODES } from './roles';
 import { formatStaffRoleName, BRAND } from './utils/textStyles';
 import { createRole } from './utils/roleCreator';
 import { logger } from './utils/Logger';
-import { setPlayerIGN, getLeaderboard, getAllPlayerData, addTierPoints, syncGuildMembers } from './utils/pointsSystem';
-import { connectDB } from './utils/database';
+import { setPlayerIGN, getLeaderboard, getAllPlayerData, addTierPoints } from './utils/pointsSystem';
 
 dotenv.config();
 
@@ -67,18 +66,11 @@ async function registerCommands() {
 
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user!.tag}`);
-  await connectDB();
   await registerCommands();
   console.log(`Total commands: ${commands.length}`);
   for (const guild of client.guilds.cache.values()) {
     await ensureAllRoles(guild);
-    await syncGuildMembers(guild);
   }
-  setInterval(async () => {
-    for (const guild of client.guilds.cache.values()) {
-      await syncGuildMembers(guild);
-    }
-  }, 300_000);
 });
 
 client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
@@ -317,7 +309,7 @@ async function handleButton(interaction: any) {
     if (!TICKET_STATE.get(channelId)) { await interaction.reply({ content: '❌ Ticket expired.', flags: MessageFlags.Ephemeral }); return; }
     const modal = new ModalBuilder().setCustomId(`tier_result_${channelId}`).setTitle('Assign Tier');
     modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(
-      new TextInputBuilder().setCustomId('tier').setLabel('Tier (e.g. HT3, LT5)').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('e.g. HT3'),
+      new TextInputBuilder().setCustomId('tier').setLabel('Tier (LT 1-5 / HT 1-5)').setStyle(TextInputStyle.Short).setRequired(true).setPlaceholder('e.g. HT 3'),
     ));
     await interaction.showModal(modal);
     return;
@@ -340,7 +332,7 @@ async function handleModal(interaction: any) {
     const verifiedRoleName = formatStaffRoleName('✅', 'Verified');
     const verifyRole = interaction.guild.roles.cache.find((r: any) => r.name === verifiedRoleName);
     if (verifyRole) { try { await interaction.member.roles.add(verifyRole); } catch {} }
-    await setPlayerIGN(interaction.user.id, ign);
+    setPlayerIGN(interaction.user.id, ign);
     await interaction.reply({ content: `✅ Verified as **${ign}**! Welcome.`, flags: MessageFlags.Ephemeral });
 
     const SEP = BRAND.SEPARATOR;
@@ -418,9 +410,9 @@ async function handleModal(interaction: any) {
     const channelId = id.replace('tier_result_', '');
     const state = TICKET_STATE.get(channelId);
     if (!state) { await interaction.reply({ content: '❌ Ticket expired.', flags: MessageFlags.Ephemeral }); return; }
-    const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase().replace(/\s+/g, '');
+    const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase();
     const tierMatch = TIERS.find(t => t.name.toUpperCase() === tierInput);
-    if (!tierMatch) { await interaction.reply({ content: `❌ Invalid tier. Use: ${TIERS.map(t => t.name).join(', ')}`, flags: MessageFlags.Ephemeral }); return; }
+    if (!tierMatch) { await interaction.reply({ content: '❌ Invalid tier. Use LT 1-5 or HT 1-5.', flags: MessageFlags.Ephemeral }); return; }
 
     const roleName = getTierRoleName(state.mode, tierMatch.name);
     const role = interaction.guild.roles.cache.find((r: any) => r.name === roleName);
@@ -529,10 +521,12 @@ app.get('/api/leaderboard/:kit', async (req, res) => {
   try {
     const kit = req.params.kit || 'overall';
     const modeName = getKitMapping()[kit];
-    const lb = await getLeaderboard();
+    const lb = getLeaderboard();
 
     const entries = lb.slice(0, 100).map((p, i) => {
-      let pts = p.points || 0;
+      const data = getAllPlayerData();
+      const pd = data[p.userId];
+      let pts = (pd?.points || 0);
       return {
         place: i + 1,
         username: p.ign,
@@ -553,7 +547,7 @@ app.get('/api/players', async (_req, res) => {
     const guild = client.guilds.cache.first();
     if (!guild) return res.json([]);
     await guild.members.fetch();
-    const data = await getAllPlayerData();
+    const data = getAllPlayerData();
 
     const players = guild.members.cache.map(m => {
       const pd = data[m.id] || { points: 0, modes: {} };
@@ -592,7 +586,7 @@ app.get('/api/players/:name', async (req, res) => {
     const guild = client.guilds.cache.first();
     if (!guild) return res.status(404).json({ error: 'Not found' });
     await guild.members.fetch();
-    const data = await getAllPlayerData();
+    const data = getAllPlayerData();
     const name = req.params.name.toLowerCase();
 
     const member = guild.members.cache.find((m: any) => {

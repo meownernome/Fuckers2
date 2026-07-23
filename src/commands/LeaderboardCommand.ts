@@ -4,7 +4,7 @@ import { BRAND } from '../utils/textStyles';
 
 export class LeaderboardCommand {
   public async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const lb = (await getLeaderboard()).slice(0, 20);
+    const lb = getLeaderboard().slice(0, 20);
     const SEP = BRAND.SEPARATOR;
 
     const embed = new EmbedBuilder()

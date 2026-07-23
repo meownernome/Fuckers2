@@ -411,9 +411,9 @@ async function handleModal(interaction: any) {
     const channelId = id.replace('tier_result_', '');
     const state = TICKET_STATE.get(channelId);
     if (!state) { await interaction.reply({ content: '❌ Ticket expired.', flags: MessageFlags.Ephemeral }); return; }
-    const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase();
+    const tierInput = interaction.fields.getTextInputValue('tier').trim().toUpperCase().replace(/\s+/g, '');
     const tierMatch = TIERS.find(t => t.name.toUpperCase() === tierInput);
-    if (!tierMatch) { await interaction.reply({ content: '❌ Invalid tier. Use LT 1-5 or HT 1-5.', flags: MessageFlags.Ephemeral }); return; }
+    if (!tierMatch) { await interaction.reply({ content: `❌ Invalid tier. Use: ${TIERS.map(t => t.name).join(', ')}`, flags: MessageFlags.Ephemeral }); return; }
 
     const roleName = getTierRoleName(state.mode, tierMatch.name);
     const role = interaction.guild.roles.cache.find((r: any) => r.name === roleName);

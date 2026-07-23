@@ -1,46 +1,12 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GtgCommand = void 0;
 const discord_js_1 = require("discord.js");
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
 const roles_1 = require("../roles");
 const textStyles_1 = require("../utils/textStyles");
 const pointsSystem_1 = require("../utils/pointsSystem");
 const roleCreator_1 = require("../utils/roleCreator");
+const textStyles_2 = require("../utils/textStyles");
 const gtgState = new Map();
 function isStaff(member) {
     if (member.permissions?.has(discord_js_1.PermissionFlagsBits.Administrator))
@@ -63,6 +29,11 @@ function parseHexColor(color) {
     if (isNaN(val))
         return 0x99AAB5;
     return val;
+}
+function progressBar(done, total) {
+    const size = 20;
+    const filled = Math.round((done / total) * size);
+    return '█'.repeat(filled) + '░'.repeat(size - filled);
 }
 class GtgCommand {
     async execute(interaction) {
@@ -140,59 +111,45 @@ class GtgCommand {
             await interaction.reply({ content: '❌ Staff only.', flags: discord_js_1.MessageFlags.Ephemeral });
             return;
         }
-        const filePath = path.join(process.cwd(), 'all_roles_list.txt');
-        if (!fs.existsSync(filePath)) {
-            await interaction.reply({ content: `❌ File \`all_roles_list.txt\` not found. Upload it to the bot directory.`, flags: discord_js_1.MessageFlags.Ephemeral });
-            return;
-        }
-        const data = fs.readFileSync(filePath, 'utf8');
-        const lines = data.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
-        if (lines.length === 0) {
-            await interaction.reply({ content: '❌ No valid role data in file.', flags: discord_js_1.MessageFlags.Ephemeral });
-            return;
-        }
         await interaction.deferReply({ flags: discord_js_1.MessageFlags.Ephemeral });
         const guild = interaction.guild;
-        await guild.roles.fetch();
-        const existingNames = new Set(guild.roles.cache.map((r) => r.name));
-        const toCreate = [];
-        const errors = [];
-        for (const line of lines) {
-            const parts = line.split(',').map(s => s.trim());
-            if (parts.length < 1 || !parts[0]) {
-                errors.push(`Invalid: ${line}`);
-                continue;
-            }
-            const name = parts[0];
-            const color = parts[1] ? parseHexColor(parts[1]) : 0x99AAB5;
-            if (existingNames.has(name)) {
-                errors.push(`Exists: ${name}`);
-                continue;
-            }
-            toCreate.push({ name, color });
+        try {
+            await guild.roles.fetch();
         }
+        catch { }
+        const existingNames = new Set(guild.roles.cache.map((r) => r.name));
+        const toCreate = roles_1.ALL_ROLES.filter(r => !existingNames.has(r.name));
         if (toCreate.length === 0) {
-            await interaction.editReply({ content: `❌ No roles to create.\n${errors.slice(0, 5).join('\n')}` });
+            await interaction.editReply({ content: '✅ All roles already exist.' });
             return;
         }
-        await interaction.editReply({ content: `⚙️ Creating ${toCreate.length} roles in batches of 5...` });
-        const failed = [];
-        const BATCH = 5;
-        for (let i = 0; i < toCreate.length; i += BATCH) {
-            const batch = toCreate.slice(i, i + BATCH);
-            const results = await Promise.allSettled(batch.map(r => guild.roles.create({ name: r.name, colors: { primaryColor: r.color }, hoist: false, mentionable: false, reason: 'GTG bulk' })
-                .then(() => true)
-                .catch(() => { failed.push(r.name); return false; })));
-            const done = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
-            await interaction.editReply({ content: `⚙️ Created ${Math.min(i + BATCH, toCreate.length)}/${toCreate.length} roles...` });
+        const total = toCreate.length;
+        let created = 0;
+        let failed = 0;
+        const start = Date.now();
+        await interaction.editReply({ content: `\`\`\`\n[${progressBar(0, total)}] 0/${total}\n\`\`\`⚙️ Creating ${total} roles...` });
+        for (let i = 0; i < total; i++) {
+            const r = toCreate[i];
+            try {
+                await (0, roleCreator_1.createRole)(guild, r.name, r.color);
+                created++;
+            }
+            catch {
+                failed++;
+            }
+            if ((i + 1) % 10 === 0 || i === total - 1) {
+                const elapsed = ((Date.now() - start) / 1000).toFixed(0);
+                await interaction.editReply({
+                    content: `\`\`\`\n[${progressBar(i + 1, total)}] ${i + 1}/${total}\n\`\`\`⚙️ ${created} created • ${failed} failed • ${elapsed}s`,
+                }).catch(() => { });
+            }
+            await new Promise(r => setTimeout(r, 1100));
         }
-        const created = toCreate.length - failed.length;
+        const elapsed = ((Date.now() - start) / 1000).toFixed(0);
+        const SEP = textStyles_2.BRAND.SEPARATOR;
         const embed = new discord_js_1.EmbedBuilder()
-            .setTitle('✅ Bulk Role Creation')
-            .setDescription(`**Created:** ${created}/${toCreate.length}\n` +
-            (failed.length > 0 ? `**Failed:** ${failed.length}\n${failed.slice(0, 5).map(n => `• ${n}`).join('\n')}` : '') +
-            (errors.length > 0 ? `\n**Skipped:** ${errors.length} invalid lines` : ''))
-            .setColor(failed.length > 0 ? 0xF1C40F : 0x2ECC71)
+            .setColor(failed > 0 ? 0xF1C40F : 0x2ECC71)
+            .setDescription(`\`\`\`md\n${SEP}\n〔 ＲＯＬＥ ＣＲＥＡＴＩＯＮ 〕\n${SEP}\`\`\`\n\n│ **Created:** ${created}/${total}\n│ **Failed:** ${failed}\n│ **Time:** ${elapsed}s\n\n${SEP}`)
             .setTimestamp();
         await interaction.editReply({ content: null, embeds: [embed] });
     }
@@ -217,23 +174,28 @@ class GtgCommand {
             await interaction.editReply({ content: `✅ All **${mode}** roles already exist.` });
             return;
         }
-        await interaction.editReply({ content: `⚙️ Creating ${needed.length} ${mode} roles...` });
+        await interaction.editReply({ content: `\`\`\`\n[${progressBar(0, needed.length)}] 0/${needed.length}\n\`\`\`⚙️ Creating ${needed.length} ${mode} roles...` });
         const failed = [];
-        const BATCH = 5;
-        for (let i = 0; i < needed.length; i += BATCH) {
-            const batch = needed.slice(i, i + BATCH);
-            await Promise.allSettled(batch.map(r => guild.roles.create({ name: r.name, colors: { primaryColor: r.color }, hoist: false, mentionable: false, reason: `GTG ${mode}` })
-                .then(() => { })
-                .catch(() => { failed.push(r.name); })));
-            await interaction.editReply({ content: `⚙️ ${mode}: ${Math.min(i + BATCH, needed.length)}/${needed.length} roles created...` });
+        for (let i = 0; i < needed.length; i++) {
+            try {
+                await (0, roleCreator_1.createRole)(guild, needed[i].name, needed[i].color);
+            }
+            catch {
+                failed.push(needed[i].name);
+            }
+            if ((i + 1) % 5 === 0 || i === needed.length - 1) {
+                await interaction.editReply({
+                    content: `\`\`\`\n[${progressBar(i + 1, needed.length)}] ${i + 1}/${needed.length}\n\`\`\`⚙️ ${needed.length - failed.length} created • ${failed.length} failed`,
+                }).catch(() => { });
+            }
+            await new Promise(r => setTimeout(r, 1100));
         }
         const created = needed.length - failed.length;
+        const SEP = textStyles_2.BRAND.SEPARATOR;
         const embed = new discord_js_1.EmbedBuilder()
-            .setTitle(`✅ ${mode} Roles Created`)
-            .setDescription(`**Created:** ${created}/${needed.length} for ${mode}\n` +
-            (skipped.length ? `**Already existed:** ${skipped.length}\n` : '') +
-            (failed.length ? `**Failed:** ${failed.length}\n${failed.slice(0, 3).map(n => `• ${n}`).join('\n')}` : ''))
-            .setColor(0x2ECC71).setTimestamp();
+            .setColor(failed.length > 0 ? 0xF1C40F : 0x2ECC71)
+            .setDescription(`\`\`\`md\n${SEP}\n〔 ${mode} ＲＯＬＥＳ 〕\n${SEP}\`\`\`\n\n│ **Created:** ${created}/${needed.length}\n│ **Skipped:** ${skipped.length}\n│ **Failed:** ${failed.length}${failed.length > 0 ? '\n│ ' + failed.slice(0, 5).map(n => `• ${n}`).join('\n│ ') : ''}\n\n${SEP}`)
+            .setTimestamp();
         await interaction.editReply({ content: null, embeds: [embed] });
     }
     async handleGive(interaction) {
@@ -266,22 +228,29 @@ class GtgCommand {
         if (!role) {
             try {
                 const tierData = roles_1.TIERS.find(t => t.name === tierLabel);
-                role = await guild.roles.create({ name: roleName, colors: { primaryColor: tierData.color }, hoist: false, mentionable: false, reason: `GTG give by ${interaction.user.tag}` });
+                await (0, roleCreator_1.createRole)(guild, roleName, tierData.color);
+                await guild.roles.fetch();
+                role = guild.roles.cache.find((r) => r.name === roleName);
             }
             catch (e) {
                 await interaction.editReply({ content: `❌ Failed to create role: ${e.message}` });
                 return;
             }
         }
+        if (!role) {
+            await interaction.editReply({ content: `❌ Role creation failed for ${roleName}.` });
+            return;
+        }
         try {
             await member.roles.add(role);
             if (pointsSystem_1.POINT_MODES.includes(mode) && pointsSystem_1.TIER_POINTS[tierLabel]) {
                 (0, pointsSystem_1.addTierPoints)(user.id, mode, tierLabel, user.displayName);
             }
+            const SEP = textStyles_2.BRAND.SEPARATOR;
             const embed = new discord_js_1.EmbedBuilder()
-                .setTitle('✅ Role Given')
-                .setDescription(`**${user}** received **${roleName}**`)
-                .setColor(0x2ECC71).setTimestamp();
+                .setColor(0x2ECC71)
+                .setDescription(`\`\`\`md\n${SEP}\n〔 ＲＯＬＥ ＧＩＶＥＮ 〕\n${SEP}\`\`\`\n\n│ **User:** ${user}\n│ **Role:** ${roleName}\n\n${SEP}`)
+                .setTimestamp();
             await interaction.editReply({ embeds: [embed] });
         }
         catch (e) {
